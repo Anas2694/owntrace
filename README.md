@@ -10,7 +10,7 @@ Early development. This repository currently contains the shared MERN project fo
 
 ## Tech stack
 
-- Client: React, Vite, JavaScript, React Router, Bootstrap, Axios
+- Client: React, Vite, JavaScript, React Router, Axios
 - Server: Node.js, Express, JavaScript, Mongoose, MongoDB
 - API style: REST
 
