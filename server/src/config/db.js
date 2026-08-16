@@ -4,8 +4,7 @@ async function connectDatabase() {
   const mongoUri = process.env.MONGO_URI?.trim()
 
   if (!mongoUri) {
-    console.log('MongoDB connection skipped because MONGO_URI is not configured')
-    return
+    throw new Error('MONGO_URI must be configured')
   }
 
   await mongoose.connect(mongoUri)

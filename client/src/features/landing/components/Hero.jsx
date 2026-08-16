@@ -1,5 +1,6 @@
 import Icon from './Icon.jsx'
 import ProductPreview from './ProductPreview.jsx'
+import { Link } from 'react-router-dom'
 
 function Hero() {
   return (
@@ -18,10 +19,10 @@ function Hero() {
             identity into one clear, actionable view.
           </p>
           <div className="hero-actions">
-            <a className="button button-primary" href="#development-status">
+            <Link className="button button-primary" to="/register">
               Get Started
               <Icon name="arrow" className="button-icon" />
-            </a>
+            </Link>
             <a className="button button-secondary" href="#how-it-works">
               See how it works
             </a>

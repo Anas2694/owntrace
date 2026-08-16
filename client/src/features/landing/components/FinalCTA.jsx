@@ -1,4 +1,5 @@
 import Icon from './Icon.jsx'
+import { Link } from 'react-router-dom'
 
 function FinalCTA() {
   return (
@@ -8,14 +9,14 @@ function FinalCTA() {
           <p className="section-kicker">Built for visibility and control</p>
           <h2 id="final-cta-title">See where your digital identity lives.</h2>
           <p id="development-status-copy">
-            OwnTrace is currently in early development. Access will open when the first useful,
-            privacy-conscious experience is ready.
+            OwnTrace is currently in early development. Create an account to begin with secure
+            setup before any provider access is requested.
           </p>
           <div className="final-cta-actions">
-            <button className="button button-primary" type="button" disabled aria-describedby="development-status-copy">
+            <Link className="button button-primary" to="/register" aria-describedby="development-status-copy">
               Get Started
-              <span className="button-soon">Coming later</span>
-            </button>
+              <Icon name="arrow" className="button-icon" />
+            </Link>
             <a className="button button-secondary" href="https://github.com/Anas2694/owntrace">
               Follow development
               <Icon name="arrow" className="button-icon" />

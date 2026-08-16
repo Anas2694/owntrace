@@ -10,4 +10,13 @@ OwnTrace may eventually process sensitive identity, email metadata, OAuth tokens
 - Configure CORS, secure cookies, rate limits, and security headers before production authentication is enabled.
 - Encrypt sensitive stored credentials or tokens when those integrations are introduced.
 
-The current foundation contains no authentication, integrations, or production credentials. Security controls will be added with the milestones that require them and reviewed before deployment.
+## Authentication controls
+
+- Passwords are hashed with bcrypt and the stored `passwordHash` is excluded from normal queries and API serialization.
+- Session JWTs use an explicit issuer, audience, algorithm allowlist, seven-day expiry, and an httpOnly cookie.
+- Development cookies use `SameSite=Lax`; production additionally requires `Secure` cookies through `NODE_ENV=production`.
+- Unsafe browser requests require an `Origin` listed in `CLIENT_ORIGINS`, in addition to the CORS allowlist.
+- Helmet, JSON body limits, general API rate limiting, and tighter registration/login rate limiting are enabled.
+- Authentication failures avoid exposing whether an email exists, and unexpected errors do not return internal details.
+
+These controls reduce common risks but are not a claim that the application is deployment-ready. OAuth state, provider-token encryption, account-level authorization, CSRF review for future mutations, and production infrastructure remain milestone-specific work.

@@ -12,4 +12,6 @@ During local development, Vite proxies `/api` requests to the Express server on 
 
 Backend code is organized by routes, controllers, configuration, and—when milestones need them—models, middleware, services, and utilities. Feature modules should be introduced only as their milestones begin; OwnTrace will remain a single backend rather than premature microservices.
 
+Authentication uses a minimal MongoDB `User` record and a signed JWT stored only in an httpOnly browser cookie. The React `AuthProvider` discovers a restorable session through `GET /api/auth/session`, while protected APIs use authentication middleware and return `401` when unauthorized; Anas-owned routes never read a token from browser storage. Authentication routes follow the route → controller → service → model boundary so later Google association can extend the user without embedding provider credentials in the user record.
+
 Privacy-sensitive integrations should store derived metadata instead of full source content wherever possible. Feature boundaries communicate through owned REST APIs rather than duplicated business logic.

@@ -6,7 +6,7 @@ OwnTrace is a personal digital identity and privacy control platform. It is inte
 
 ## Status
 
-Early development. This repository currently contains the shared MERN project foundation only; product features have not been implemented yet.
+Early development. The responsive public landing page and password-based authentication are implemented. Gmail, account discovery, and other product integrations are still in progress.
 
 ## Tech stack
 
@@ -16,14 +16,14 @@ Early development. This repository currently contains the shared MERN project fo
 
 ## Local setup
 
-Requirements: Node.js 20.19+ on the Node 20 release line, or Node.js 22.12+, matching Vite 8's supported runtime ranges; npm; and MongoDB when database-backed features are introduced.
+Requirements: Node.js 20.19+ on the Node 20 release line, or Node.js 22.12+, matching Vite 8's supported runtime ranges; npm; and MongoDB.
 
 ```bash
 npm install
 npm run setup
 ```
 
-Copy `server/.env.example` to `server/.env`. The API health check works without a MongoDB connection; set `MONGO_URI` when database work begins.
+Copy `server/.env.example` to `server/.env`. Configure `MONGO_URI` and a private `JWT_SECRET` of at least 32 characters. Never commit `server/.env` or share its values.
 
 Run the client and server together:
 
@@ -40,6 +40,12 @@ npm run dev:server
 
 - Client: `http://localhost:5173`
 - API health: `http://localhost:5000/api/health`
+
+Run the backend authentication tests with an isolated in-memory MongoDB instance:
+
+```bash
+npm test
+```
 
 ## Team
 
