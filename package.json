@@ -1,0 +1,24 @@
+{
+  "name": "owntrace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OwnTrace is a unified personal digital identity and privacy control platform.",
+  "scripts": {
+    "dev": "concurrently --names client,server --prefix-colors blue,green \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "build": "npm run build --prefix client",
+    "lint": "npm run lint --prefix client",
+    "setup": "npm install --prefix client && npm install --prefix server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Anas2694/owntrace.git"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
