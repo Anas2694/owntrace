@@ -211,4 +211,51 @@ describe('authentication API', () => {
       await agent.get('/api/auth/me').expect(401)
     })
   })
+
+  describe('onboarding API', () => {
+    it('requires an authenticated user', async () => {
+      await request(app).get('/api/onboarding').expect(401)
+      await request(app).patch('/api/onboarding').send({ status: 'PRIVACY_REVIEWED' }).expect(401)
+    })
+
+    it('persists the supported onboarding progression', async () => {
+      const agent = request.agent(app)
+      await agent.post('/api/auth/register').send(validRegistration).expect(201)
+
+      const initial = await agent.get('/api/onboarding').expect(200)
+      expect(initial.body.onboarding.status).toBe('NOT_STARTED')
+
+      const privacy = await agent
+        .patch('/api/onboarding')
+        .send({ status: 'PRIVACY_REVIEWED' })
+        .expect(200)
+      expect(privacy.body.onboarding.status).toBe('PRIVACY_REVIEWED')
+
+      const gmail = await agent
+        .patch('/api/onboarding')
+        .send({ status: 'GMAIL_PENDING' })
+        .expect(200)
+      expect(gmail.body.onboarding.status).toBe('GMAIL_PENDING')
+      expect((await User.findOne({ email: validRegistration.email })).onboardingStatus).toBe(
+        'GMAIL_PENDING',
+      )
+    })
+
+    it('rejects unsupported or out-of-order states', async () => {
+      const agent = request.agent(app)
+      await agent.post('/api/auth/register').send(validRegistration).expect(201)
+
+      const unsupported = await agent
+        .patch('/api/onboarding')
+        .send({ status: 'COMPLETED' })
+        .expect(400)
+      const outOfOrder = await agent
+        .patch('/api/onboarding')
+        .send({ status: 'GMAIL_PENDING' })
+        .expect(409)
+
+      expect(unsupported.body.code).toBe('INVALID_ONBOARDING_STATUS')
+      expect(outOfOrder.body.code).toBe('ONBOARDING_STEP_OUT_OF_ORDER')
+    })
+  })
 })

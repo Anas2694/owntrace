@@ -96,3 +96,38 @@ Clears the session cookie and returns:
 ```
 
 Gmail, accounts, subscriptions, breaches, and other product APIs remain outside this authentication milestone.
+
+## Onboarding
+
+Both onboarding endpoints require a valid `owntrace_session` cookie. State changes are scoped to the authenticated user.
+
+### Read onboarding status
+
+`GET /api/onboarding`
+
+Response (`200 OK`):
+
+```json
+{
+  "success": true,
+  "onboarding": {
+    "status": "NOT_STARTED"
+  }
+}
+```
+
+### Advance onboarding
+
+`PATCH /api/onboarding`
+
+Request:
+
+```json
+{
+  "status": "PRIVACY_REVIEWED"
+}
+```
+
+The supported progression is `NOT_STARTED → PRIVACY_REVIEWED → GMAIL_PENDING`. Repeating the current step is idempotent. Unsupported states return `400 INVALID_ONBOARDING_STATUS`; skipping a required step returns `409 ONBOARDING_STEP_OUT_OF_ORDER`.
+
+`GMAIL_PENDING` means the user completed the privacy explanation and is ready to begin connection setup. It does not mean Gmail access has been granted.

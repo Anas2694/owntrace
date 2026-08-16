@@ -46,8 +46,7 @@ function logout(_request, response) {
 }
 
 async function me(request, response) {
-  const user = await getUserById(request.auth.userId)
-  response.status(200).json({ success: true, user: serializeUser(user) })
+  response.status(200).json({ success: true, user: serializeUser(request.user) })
 }
 
 async function session(request, response) {

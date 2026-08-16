@@ -14,4 +14,6 @@ Backend code is organized by routes, controllers, configuration, and—when mile
 
 Authentication uses a minimal MongoDB `User` record and a signed JWT stored only in an httpOnly browser cookie. The React `AuthProvider` discovers a restorable session through `GET /api/auth/session`, while protected APIs use authentication middleware and return `401` when unauthorized; Anas-owned routes never read a token from browser storage. Authentication routes follow the route → controller → service → model boundary so later Google association can extend the user without embedding provider credentials in the user record.
 
+Onboarding is a small, server-enforced progression on the user record: `NOT_STARTED → PRIVACY_REVIEWED → GMAIL_PENDING`. It explains data access and minimization before handing off to Gmail connection, without starting OAuth or creating a general workflow engine.
+
 Privacy-sensitive integrations should store derived metadata instead of full source content wherever possible. Feature boundaries communicate through owned REST APIs rather than duplicated business logic.

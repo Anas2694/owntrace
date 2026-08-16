@@ -6,7 +6,8 @@ import PublicOnlyRoute from './features/auth/PublicOnlyRoute.jsx'
 import RegisterPage from './features/auth/RegisterPage.jsx'
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx'
 import LandingPage from './features/landing/LandingPage.jsx'
-import OnboardingPlaceholder from './features/onboarding/OnboardingPlaceholder.jsx'
+import GmailConnectionHandoff from './features/onboarding/GmailConnectionHandoff.jsx'
+import OnboardingPage from './features/onboarding/OnboardingPage.jsx'
 
 function App() {
   return (
@@ -16,7 +17,11 @@ function App() {
       <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
       <Route
         path="/onboarding"
-        element={<ProtectedRoute><OnboardingPlaceholder /></ProtectedRoute>}
+        element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/connect/gmail"
+        element={<ProtectedRoute><GmailConnectionHandoff /></ProtectedRoute>}
       />
       <Route path="/dashboard" element={<DashboardPlaceholder />} />
       <Route path="*" element={<Navigate to="/" replace />} />
