@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Icon from './Icon.jsx'
 
 const navItems = [
@@ -46,12 +47,12 @@ function Navbar() {
             ))}
           </ul>
           <div className="nav-actions">
-            <a className="nav-sign-in" href="#development-status">
-              Sign in <span>Later</span>
-            </a>
-            <a className="button button-small button-primary" href="#development-status">
+            <Link className="nav-sign-in" to="/login">
+              Sign in
+            </Link>
+            <Link className="button button-small button-primary" to="/register">
               Get Started
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -81,12 +82,12 @@ function Navbar() {
             ))}
           </ul>
           <div className="mobile-nav-actions">
-            <a href="#development-status" onClick={closeMenu}>
-              Sign in <span>Coming later</span>
-            </a>
-            <a className="button button-primary" href="#development-status" onClick={closeMenu}>
+            <Link to="/login" onClick={closeMenu}>
+              Sign in
+            </Link>
+            <Link className="button button-primary" to="/register" onClick={closeMenu}>
               Get Started
-            </a>
+            </Link>
           </div>
         </div>
       </nav>
