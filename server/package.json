@@ -8,7 +8,7 @@
     "start": "node src/server.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

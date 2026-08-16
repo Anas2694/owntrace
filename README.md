@@ -16,7 +16,7 @@ Early development. This repository currently contains the shared MERN project fo
 
 ## Local setup
 
-Requirements: Node.js 20 or newer, npm, and MongoDB when database-backed features are introduced.
+Requirements: Node.js 20.19+ on the Node 20 release line, or Node.js 22.12+, matching Vite 8's supported runtime ranges; npm; and MongoDB when database-backed features are introduced.
 
 ```bash
 npm install
