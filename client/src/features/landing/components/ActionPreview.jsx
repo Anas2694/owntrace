@@ -9,6 +9,21 @@ function ActionPreview() {
   return (
     <section className="landing-section action-first-section" aria-labelledby="action-first-title">
       <div className="landing-container split-section action-first-layout">
+        <div className="section-copy action-copy">
+          <p className="section-kicker">Action first</p>
+          <h2 id="action-first-title">Know what to do next.</h2>
+          <p>
+            A privacy dashboard should not leave people with hundreds of warnings. OwnTrace aims
+            to prioritize supported findings and explain the next useful step—without hiding the
+            evidence behind the recommendation.
+          </p>
+          <ul className="action-benefits">
+            <li><strong>Priority</strong><span>What deserves attention first</span></li>
+            <li><strong>Context</strong><span>Why the action is being suggested</span></li>
+            <li><strong>Control</strong><span>The user decides what happens next</span></li>
+          </ul>
+        </div>
+
         <div className="action-inbox-preview">
           <header>
             <div>
@@ -32,21 +47,6 @@ function ActionPreview() {
             ))}
           </ul>
           <p>Sample data — this is not the product&apos;s Privacy Inbox.</p>
-        </div>
-
-        <div className="section-copy action-copy">
-          <p className="section-kicker">Action first</p>
-          <h2 id="action-first-title">Know what to do next.</h2>
-          <p>
-            A privacy dashboard should not leave people with hundreds of warnings. OwnTrace aims
-            to prioritize supported findings and explain the next useful step—without hiding the
-            evidence behind the recommendation.
-          </p>
-          <ul className="action-benefits">
-            <li><strong>Priority</strong><span>What deserves attention first</span></li>
-            <li><strong>Context</strong><span>Why the action is being suggested</span></li>
-            <li><strong>Control</strong><span>The user decides what happens next</span></li>
-          </ul>
         </div>
       </div>
     </section>

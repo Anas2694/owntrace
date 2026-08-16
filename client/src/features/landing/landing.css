@@ -1292,7 +1292,14 @@
   grid-template-columns: minmax(28rem, 1.1fr) minmax(0, 0.9fr);
 }
 
+.action-copy {
+  grid-column: 2;
+  grid-row: 1;
+}
+
 .action-inbox-preview {
+  grid-column: 1;
+  grid-row: 1;
   padding: 1.25rem;
 }
 
@@ -1786,8 +1793,10 @@
     justify-self: center;
   }
 
-  .action-copy {
-    grid-row: 1;
+  .action-copy,
+  .action-inbox-preview {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .final-cta-panel {
