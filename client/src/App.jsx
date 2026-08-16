@@ -5,8 +5,8 @@ import ProtectedRoute from './features/auth/ProtectedRoute.jsx'
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute.jsx'
 import RegisterPage from './features/auth/RegisterPage.jsx'
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx'
+import GmailConnectionPage from './features/google/GmailConnectionPage.jsx'
 import LandingPage from './features/landing/LandingPage.jsx'
-import GmailConnectionHandoff from './features/onboarding/GmailConnectionHandoff.jsx'
 import OnboardingPage from './features/onboarding/OnboardingPage.jsx'
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
       />
       <Route
         path="/connect/gmail"
-        element={<ProtectedRoute><GmailConnectionHandoff /></ProtectedRoute>}
+        element={<ProtectedRoute><GmailConnectionPage /></ProtectedRoute>}
       />
       <Route path="/dashboard" element={<DashboardPlaceholder />} />
       <Route path="*" element={<Navigate to="/" replace />} />

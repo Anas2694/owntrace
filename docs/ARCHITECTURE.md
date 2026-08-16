@@ -16,4 +16,6 @@ Authentication uses a minimal MongoDB `User` record and a signed JWT stored only
 
 Onboarding is a small, server-enforced progression on the user record: `NOT_STARTED → PRIVACY_REVIEWED → GMAIL_PENDING`. It explains data access and minimization before handing off to Gmail connection, without starting OAuth or creating a general workflow engine.
 
+Google OAuth remains server-side. Provider tokens are encrypted with AES-256-GCM, never serialized to the client, and associated through Google's verified stable OpenID `sub`. Gmail ingestion uses resumable 25-message API batches and stores only HMAC provider identifiers plus minimized header-derived signals. `GmailSyncJob` persists safe progress without an external queue; the browser can resume an interrupted queued job.
+
 Privacy-sensitive integrations should store derived metadata instead of full source content wherever possible. Feature boundaries communicate through owned REST APIs rather than duplicated business logic.
