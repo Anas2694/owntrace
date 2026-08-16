@@ -7,17 +7,18 @@ function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true)
   const [sessionError, setSessionError] = useState(false)
 
-  const restoreSession = useCallback(async () => {
-    setIsLoading(true)
+  const restoreSession = useCallback(async ({ showLoading = true } = {}) => {
+    if (showLoading) setIsLoading(true)
     setSessionError(false)
 
     try {
       const response = await api.get('/auth/session')
       setUser(response.data.user)
+      return response.data.user
     } catch {
       setSessionError(true)
     } finally {
-      setIsLoading(false)
+      if (showLoading) setIsLoading(false)
     }
   }, [])
 

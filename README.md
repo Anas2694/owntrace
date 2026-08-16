@@ -6,7 +6,7 @@ OwnTrace is a personal digital identity and privacy control platform. It is inte
 
 ## Status
 
-Early development. The responsive public landing page and password-based authentication are implemented. Gmail, account discovery, and other product integrations are still in progress.
+Early development. The responsive public landing page, password-based authentication, and privacy-first onboarding are implemented. Gmail is not connected yet; account discovery and other product integrations are still in progress.
 
 ## Tech stack
 

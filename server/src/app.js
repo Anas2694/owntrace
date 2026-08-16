@@ -10,6 +10,7 @@ import {
 } from './middleware/security.middleware.js'
 import authRouter from './routes/auth.routes.js'
 import healthRouter from './routes/health.routes.js'
+import onboardingRouter from './routes/onboarding.routes.js'
 
 const app = express()
 
@@ -23,6 +24,7 @@ app.use(requireTrustedOrigin)
 
 app.use('/api/health', healthRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/onboarding', onboardingRouter)
 
 app.use(notFoundHandler)
 app.use(errorHandler)
