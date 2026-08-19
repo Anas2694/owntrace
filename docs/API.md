@@ -249,3 +249,48 @@ This stable integration contract is intended for clients such as Raphael's dashb
 `GET /api/accounts/:id`
 
 Returns the safe account shape plus up to 100 of its most recent minimized evidence records, `evidenceTotal`, and `evidenceTruncated`. Evidence includes class, weight, ownership flag, reason code, source domain, and occurrence time. Cross-user, missing, and invalid identifiers return `404 ACCOUNT_NOT_FOUND` without revealing whether another user owns the identifier.
+
+## Identity graph
+
+`GET /api/identity`
+
+Requires a valid OwnTrace session. Returns a derived graph containing typed `nodes`, typed `edges`, `generatedAt`, and a `summary`:
+
+```json
+{
+  "success": true,
+  "graph": {
+    "nodes": [
+      {
+        "id": "profile",
+        "type": "PROFILE",
+        "label": "Example User",
+        "detail": "OwnTrace profile",
+        "status": "CONFIRMED"
+      }
+    ],
+    "edges": [
+      {
+        "id": "profile:AUTHENTICATES_AS:email:primary",
+        "source": "profile",
+        "target": "email:primary",
+        "type": "AUTHENTICATES_AS",
+        "label": "Authenticates as"
+      }
+    ],
+    "summary": {
+      "emailIdentityCount": 1,
+      "connectedIdentityCount": 1,
+      "accountCount": 186,
+      "serviceCount": 186,
+      "renderedAccountCount": 186,
+      "truncated": false
+    },
+    "generatedAt": "..."
+  }
+}
+```
+
+Node types are `PROFILE`, `EMAIL_IDENTITY`, `GOOGLE_IDENTITY`, `ACCOUNT`, and `SERVICE`. Edge types are `AUTHENTICATES_AS`, `CONNECTED_IDENTITY`, `DISCOVERED_ACCOUNT`, `HAS_ACCOUNT_EVIDENCE`, and `BELONGS_TO_SERVICE`.
+
+The summary reports full counts. Node rendering is capped at the 200 highest-confidence accounts; `truncated` indicates when the cap applies. Provider IDs, OAuth tokens, Gmail identifiers, connection identifiers, raw subjects, and raw evidence are never returned.
