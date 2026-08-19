@@ -131,3 +131,44 @@ Request:
 The supported progression is `NOT_STARTED → PRIVACY_REVIEWED → GMAIL_PENDING`. Repeating the current step is idempotent. Unsupported states return `400 INVALID_ONBOARDING_STATUS`; skipping a required step returns `409 ONBOARDING_STEP_OUT_OF_ORDER`.
 
 `GMAIL_PENDING` means the user completed the privacy explanation and is ready to begin connection setup. It does not mean Gmail access has been granted.
+
+## Google connection
+
+All endpoints require a valid OwnTrace session. Provider tokens and the Google account ID are never returned.
+
+### Connection status
+
+`GET /api/google/connection`
+
+Returns whether Google is configured for the current environment and either `connection: null` or safe connection metadata including email, scopes, status, expiry timestamp, and sync timestamps.
+
+### Begin OAuth
+
+`GET /api/google/oauth/start`
+
+Sets a short-lived httpOnly OAuth-state cookie and redirects to Google. The requested scopes are `openid`, `email`, and `https://www.googleapis.com/auth/gmail.metadata`, with offline access for refresh support.
+
+### OAuth callback
+
+`GET /api/google/oauth/callback`
+
+Validates the session-bound state, exchanges the code on the server, verifies the Google ID token, encrypts provider tokens, and redirects to `/connect/gmail` with a safe result code. Raw provider errors and credentials are not placed in the URL.
+
+### Disconnect
+
+`DELETE /api/google/connection`
+
+Attempts Google token revocation, then deletes the authenticated user's connection, sync state, and derived Gmail signals. A provider network failure returns `502 GOOGLE_REVOCATION_FAILED` without deleting local state so revocation can be retried.
+
+## Gmail metadata sync
+
+The sync is split into bounded requests. Every route is scoped to the authenticated user.
+
+- `GET /api/google/sync` — current safe job state or `null`.
+- `POST /api/google/sync` — create or restart a queued job (`202 Accepted`) when no batch is active.
+- `POST /api/google/sync/next` — process the next batch of up to 25 message IDs and selected metadata headers.
+- `DELETE /api/google/sync` — cancel an active job without deleting previously derived signals.
+
+Job states are `QUEUED`, `SCANNING`, `PROCESSING`, `COMPLETED`, `FAILED`, and `CANCELLED`. Progress includes processed/stored counts and an estimated mailbox total; provider page tokens remain server-only. Repeated scans upsert by a user-scoped HMAC message identifier and do not duplicate signals. Starting another scan or advancing a second batch while one is active returns `409 GMAIL_SYNC_IN_PROGRESS` so concurrent browser tabs cannot reset or double-count progress. A stale batch lock can be reclaimed after an interrupted worker.
+
+Safe error codes include `GOOGLE_NOT_CONNECTED`, `GOOGLE_RECONNECT_REQUIRED`, `GOOGLE_RATE_LIMITED`, `GOOGLE_REQUEST_FAILED`, `GMAIL_SYNC_NOT_STARTED`, `GMAIL_SYNC_IN_PROGRESS`, `PARTIAL_METADATA_RESULTS`, and `MESSAGE_LIMIT_REACHED`.

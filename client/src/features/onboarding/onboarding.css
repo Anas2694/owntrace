@@ -81,6 +81,11 @@
   text-wrap: balance;
 }
 
+.onboarding-copy h1:focus,
+.onboarding-handoff h1:focus {
+  outline: none;
+}
+
 .onboarding-copy > p:last-child,
 .onboarding-handoff section > p:not(.onboarding-eyebrow) {
   max-width: 42rem;

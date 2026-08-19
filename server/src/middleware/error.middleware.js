@@ -15,10 +15,14 @@ function errorHandler(error, _request, response, _next) {
   }
 
   const statusCode = error.statusCode || 500
+  const isOperationalError = error instanceof AppError
   const payload = {
     success: false,
     code: error.code || 'INTERNAL_ERROR',
-    message: statusCode >= 500 ? 'An unexpected server error occurred.' : error.message,
+    message:
+      statusCode >= 500 && !isOperationalError
+        ? 'An unexpected server error occurred.'
+        : error.message,
   }
 
   if (error.details && statusCode < 500) payload.errors = error.details

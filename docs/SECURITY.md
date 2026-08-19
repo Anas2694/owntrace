@@ -19,4 +19,14 @@ OwnTrace may eventually process sensitive identity, email metadata, OAuth tokens
 - Helmet, JSON body limits, general API rate limiting, and tighter registration/login rate limiting are enabled.
 - Authentication failures avoid exposing whether an email exists, and unexpected errors do not return internal details.
 
-These controls reduce common risks but are not a claim that the application is deployment-ready. OAuth state, provider-token encryption, account-level authorization, CSRF review for future mutations, and production infrastructure remain milestone-specific work.
+These controls reduce common risks but are not a claim that the application is deployment-ready. Account-level authorization, broader CSRF review as future mutations are added, provider verification, and production infrastructure remain milestone-specific work.
+
+## Google and Gmail controls
+
+- OAuth uses an opaque random `state`; a short-lived signed httpOnly cookie binds its hash to the authenticated OwnTrace user.
+- The callback verifies Google's signed ID token and uses the stable OpenID `sub` rather than email as the provider identity key.
+- Access and refresh tokens are encrypted at rest with AES-256-GCM and are excluded from normal model queries and every API response.
+- OwnTrace requests `gmail.metadata`, not send/modify/delete permissions. This is still a Google restricted scope and production release requires the applicable Google verification and security-assessment process.
+- Sync requests selected `From`, `Subject`, and `Date` headers only. Full bodies, snippets, raw messages, and attachments are not requested or stored.
+- Provider message/thread IDs are HMAC-derived. Email addresses and long numeric strings are redacted from the stored normalized subject signal.
+- Disconnect first attempts provider revocation, then removes the local connection, sync job, and derived Gmail signals. Network revocation failures retain local data so the user can safely retry.
