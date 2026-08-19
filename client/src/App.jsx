@@ -8,6 +8,7 @@ import PublicOnlyRoute from './features/auth/PublicOnlyRoute.jsx'
 import RegisterPage from './features/auth/RegisterPage.jsx'
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx'
 import GmailConnectionPage from './features/google/GmailConnectionPage.jsx'
+import IdentityPage from './features/identity/IdentityPage.jsx'
 import LandingPage from './features/landing/LandingPage.jsx'
 import OnboardingPage from './features/onboarding/OnboardingPage.jsx'
 
@@ -30,6 +31,7 @@ function App() {
         path="/accounts/:id"
         element={<ProtectedRoute><AccountDetailPage /></ProtectedRoute>}
       />
+      <Route path="/identity" element={<ProtectedRoute><IdentityPage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<DashboardPlaceholder />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

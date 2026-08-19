@@ -32,5 +32,6 @@ These controls reduce common risks but are not a claim that the application is d
 - Account discovery scopes every signal, evidence record, and account to the authenticated user. Internal Gmail signal and connection identifiers are excluded from evidence serialization.
 - Account list, detail, and summary queries always include the authenticated user ID. Invalid, missing, and cross-user account identifiers share the same safe not-found response to reduce IDOR disclosure.
 - Account list input uses allowlisted filters/sorts, escaped search patterns, pagination, and a maximum page size of 100. Detail evidence is capped at the 100 most recent minimized records.
+- Identity graph queries are user-scoped and return derived typed relationships only. Provider account IDs, tokens, Gmail identifiers, connection identifiers, raw subjects, and raw evidence are excluded. Visual account nodes are capped at 200.
 - Marketing-only and unclassified messages cannot independently produce likely or confirmed account ownership.
 - Disconnect first attempts provider revocation, then removes the local connection, sync job, derived Gmail signals, Gmail-derived evidence, and accounts with no remaining evidence. Network revocation failures retain local data so the user can safely retry.

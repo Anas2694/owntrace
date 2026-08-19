@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import api from '../../services/api.js'
-import AccountsHeader from './AccountsHeader.jsx'
+import WorkspaceHeader from '../workspace/WorkspaceHeader.jsx'
 import { formatAccountDate, formatEnum, getEvidenceLabel } from './account-format.js'
 import './accounts.css'
 
@@ -57,7 +57,7 @@ function AccountDetailPage() {
   return (
     <main className="accounts-page">
       <div className="accounts-shell">
-        <AccountsHeader />
+        <WorkspaceHeader />
         <Link className="accounts-back-link" to="/accounts">← Back to accounts</Link>
 
         {isLoading ? (

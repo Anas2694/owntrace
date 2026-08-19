@@ -22,4 +22,6 @@ When a Gmail scan reaches a completed bounded batch, the account-discovery servi
 
 The account read layer exposes only user-scoped REST resources. List queries are paginated and allow bounded search, confidence, dormancy, and sorting controls. Detail responses serialize minimized evidence without Gmail message IDs, connection IDs, subjects, or provider credentials. Dormancy is refreshed from the most recent ownership evidence using documented time bands; it remains an inference rather than a claim about the service's current account state.
 
+The identity graph is a read-time projection over the authenticated user, safe Google connection metadata, accounts, and evidence provenance. Deterministic typed nodes and edges avoid a separate graph database. The summary reports complete counts while the visual graph caps account nodes at 200; the paginated Accounts API remains the full inventory interface.
+
 Privacy-sensitive integrations should store derived metadata instead of full source content wherever possible. Feature boundaries communicate through owned REST APIs rather than duplicated business logic.

@@ -12,6 +12,7 @@ import accountRouter from './routes/account.routes.js'
 import authRouter from './routes/auth.routes.js'
 import googleRouter from './routes/google.routes.js'
 import healthRouter from './routes/health.routes.js'
+import identityRouter from './routes/identity.routes.js'
 import onboardingRouter from './routes/onboarding.routes.js'
 
 const app = express()
@@ -29,6 +30,7 @@ app.use('/api/auth', authRouter)
 app.use('/api/google', googleRouter)
 app.use('/api/onboarding', onboardingRouter)
 app.use('/api/accounts', accountRouter)
+app.use('/api/identity', identityRouter)
 
 app.use(notFoundHandler)
 app.use(errorHandler)
