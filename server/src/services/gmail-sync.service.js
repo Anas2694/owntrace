@@ -8,6 +8,7 @@ import AppError from '../utils/app-error.js'
 import { withGoogleClient } from './google-client.service.js'
 
 const BATCH_SIZE = 25
+const BATCH_LOCK_TIMEOUT_MS = 5 * 60 * 1000
 const METADATA_CONCURRENCY = 5
 const DEFAULT_MESSAGE_LIMIT = 2000
 const METADATA_HEADERS = ['From', 'Subject', 'Date']
@@ -83,6 +84,21 @@ async function startSync(userId) {
     throw new AppError('Reconnect Gmail before starting a scan.', 409, 'GOOGLE_RECONNECT_REQUIRED')
   }
 
+  const activeJob = await GmailSyncJob.findOne({
+    userId,
+    status: { $in: ['QUEUED', 'SCANNING', 'PROCESSING'] },
+  })
+  const activeJobIsStale = activeJob
+    && ['SCANNING', 'PROCESSING'].includes(activeJob.status)
+    && activeJob.updatedAt < new Date(Date.now() - BATCH_LOCK_TIMEOUT_MS)
+  if (activeJob && !activeJobIsStale) {
+    throw new AppError(
+      'A Gmail metadata scan is already in progress.',
+      409,
+      'GMAIL_SYNC_IN_PROGRESS',
+    )
+  }
+
   await GoogleConnection.updateOne(
     { _id: connection.id, userId },
     { $set: { lastErrorCode: null, status: 'SYNCING' } },
@@ -155,18 +171,39 @@ async function fetchMetadataBatch(gmail, messages) {
 }
 
 async function processNextBatch(userId) {
-  const job = await getSyncJob(userId, { includePageToken: true })
+  const currentJob = await getSyncJob(userId, { includePageToken: true })
 
-  if (!job) throw new AppError('Start a Gmail scan before processing it.', 409, 'GMAIL_SYNC_NOT_STARTED')
-  if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status)) return job
+  if (!currentJob) {
+    throw new AppError('Start a Gmail scan before processing it.', 409, 'GMAIL_SYNC_NOT_STARTED')
+  }
+  if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(currentJob.status)) return currentJob
+
+  const job = await GmailSyncJob.findOneAndUpdate(
+    {
+      _id: currentJob.id,
+      userId,
+      $or: [
+        { status: 'QUEUED' },
+        {
+          status: { $in: ['SCANNING', 'PROCESSING'] },
+          updatedAt: { $lt: new Date(Date.now() - BATCH_LOCK_TIMEOUT_MS) },
+        },
+      ],
+    },
+    { $set: { lastErrorCode: null, status: 'SCANNING' } },
+    { returnDocument: 'after' },
+  ).select('+nextPageToken')
+
+  if (!job) {
+    throw new AppError(
+      'A Gmail metadata batch is already in progress.',
+      409,
+      'GMAIL_SYNC_IN_PROGRESS',
+    )
+  }
 
   try {
     return await withGoogleClient(userId, async ({ connection, oauthClient }) => {
-      await GmailSyncJob.updateOne(
-        { _id: job.id, userId },
-        { $set: { status: 'SCANNING', lastErrorCode: null } },
-      )
-
       const gmail = google.gmail({ auth: oauthClient, version: 'v1' })
       const listResponse = await gmail.users.messages.list({
         maxResults: BATCH_SIZE,

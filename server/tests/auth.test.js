@@ -480,6 +480,81 @@ describe('authentication API', () => {
       )
     })
 
+    it('prevents concurrent requests from resetting or duplicating Gmail sync progress', async () => {
+      const agent = request.agent(app)
+      await agent.post('/api/auth/register').send(validRegistration).expect(201)
+      const user = await User.findOne({ email: validRegistration.email })
+      await GoogleConnection.create({
+        email: 'google-user@example.com',
+        encryptedAccessToken: encryptSecret('access-token'),
+        encryptedRefreshToken: encryptSecret('refresh-token'),
+        googleAccountId: 'stable-google-account-id',
+        scopes: [GMAIL_METADATA_SCOPE],
+        tokenExpiresAt: new Date(Date.now() + 3_600_000),
+        userId: user.id,
+      })
+
+      let releaseList
+      let markListStarted
+      const listStarted = new Promise((resolve) => { markListStarted = resolve })
+      const listReleased = new Promise((resolve) => { releaseList = resolve })
+      const list = vi.fn(async () => {
+        markListStarted()
+        await listReleased
+        return { data: { messages: [], resultSizeEstimate: 0 } }
+      })
+      vi.spyOn(google, 'gmail').mockReturnValue({ users: { messages: { list } } })
+
+      await agent.post('/api/google/sync').expect(202)
+      await agent.post('/api/google/sync').expect(409, {
+        success: false,
+        code: 'GMAIL_SYNC_IN_PROGRESS',
+        message: 'A Gmail metadata scan is already in progress.',
+      })
+
+      const firstBatch = agent.post('/api/google/sync/next').then((response) => response)
+      await listStarted
+      const overlappingBatch = await agent.post('/api/google/sync/next').expect(409)
+      expect(overlappingBatch.body.code).toBe('GMAIL_SYNC_IN_PROGRESS')
+
+      releaseList()
+      expect((await firstBatch).status).toBe(200)
+      expect((await GmailSyncJob.findOne({ userId: user.id })).status).toBe('COMPLETED')
+      expect(list).toHaveBeenCalledTimes(1)
+    })
+
+    it('recovers a stale Gmail batch lock after an interrupted worker', async () => {
+      const agent = request.agent(app)
+      await agent.post('/api/auth/register').send(validRegistration).expect(201)
+      const user = await User.findOne({ email: validRegistration.email })
+      const connection = await GoogleConnection.create({
+        email: 'google-user@example.com',
+        encryptedAccessToken: encryptSecret('access-token'),
+        encryptedRefreshToken: encryptSecret('refresh-token'),
+        googleAccountId: 'stable-google-account-id',
+        scopes: [GMAIL_METADATA_SCOPE],
+        tokenExpiresAt: new Date(Date.now() + 3_600_000),
+        userId: user.id,
+      })
+      const job = await GmailSyncJob.create({
+        connectionId: connection.id,
+        status: 'SCANNING',
+        userId: user.id,
+      })
+      await GmailSyncJob.collection.updateOne(
+        { _id: job._id },
+        { $set: { updatedAt: new Date(Date.now() - 10 * 60 * 1000) } },
+      )
+      vi.spyOn(google, 'gmail').mockReturnValue({
+        users: { messages: { list: vi.fn().mockResolvedValue({ data: { messages: [] } }) } },
+      })
+
+      const response = await agent.post('/api/google/sync/next').expect(200)
+
+      expect(response.body.sync.status).toBe('COMPLETED')
+      expect((await GmailSyncJob.findById(job.id)).status).toBe('COMPLETED')
+    })
+
     it('keeps Gmail sync state scoped to the authenticated user', async () => {
       const firstAgent = request.agent(app)
       const secondAgent = request.agent(app)
@@ -503,6 +578,13 @@ describe('authentication API', () => {
       const secondUserView = await secondAgent.get('/api/google/sync').expect(200)
 
       expect(secondUserView.body.sync).toBeNull()
+
+      const secondUserConnection = await secondAgent.get('/api/google/connection').expect(200)
+      expect(secondUserConnection.body.google.connection).toBeNull()
+
+      const secondUserDisconnect = await secondAgent.delete('/api/google/connection').expect(200)
+      expect(secondUserDisconnect.body.disconnected).toBe(false)
+      expect(await GoogleConnection.countDocuments({ userId: firstUser.id })).toBe(1)
     })
   })
 })

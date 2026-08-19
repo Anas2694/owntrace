@@ -165,10 +165,10 @@ Attempts Google token revocation, then deletes the authenticated user's connecti
 The sync is split into bounded requests. Every route is scoped to the authenticated user.
 
 - `GET /api/google/sync` — current safe job state or `null`.
-- `POST /api/google/sync` — create/reset a queued job (`202 Accepted`).
+- `POST /api/google/sync` — create or restart a queued job (`202 Accepted`) when no batch is active.
 - `POST /api/google/sync/next` — process the next batch of up to 25 message IDs and selected metadata headers.
 - `DELETE /api/google/sync` — cancel an active job without deleting previously derived signals.
 
-Job states are `QUEUED`, `SCANNING`, `PROCESSING`, `COMPLETED`, `FAILED`, and `CANCELLED`. Progress includes processed/stored counts and an estimated mailbox total; provider page tokens remain server-only. Repeated scans upsert by a user-scoped HMAC message identifier and do not duplicate signals.
+Job states are `QUEUED`, `SCANNING`, `PROCESSING`, `COMPLETED`, `FAILED`, and `CANCELLED`. Progress includes processed/stored counts and an estimated mailbox total; provider page tokens remain server-only. Repeated scans upsert by a user-scoped HMAC message identifier and do not duplicate signals. Starting another scan or advancing a second batch while one is active returns `409 GMAIL_SYNC_IN_PROGRESS` so concurrent browser tabs cannot reset or double-count progress. A stale batch lock can be reclaimed after an interrupted worker.
 
-Safe error codes include `GOOGLE_NOT_CONNECTED`, `GOOGLE_RECONNECT_REQUIRED`, `GOOGLE_RATE_LIMITED`, `GOOGLE_REQUEST_FAILED`, `GMAIL_SYNC_NOT_STARTED`, `PARTIAL_METADATA_RESULTS`, and `MESSAGE_LIMIT_REACHED`.
+Safe error codes include `GOOGLE_NOT_CONNECTED`, `GOOGLE_RECONNECT_REQUIRED`, `GOOGLE_RATE_LIMITED`, `GOOGLE_REQUEST_FAILED`, `GMAIL_SYNC_NOT_STARTED`, `GMAIL_SYNC_IN_PROGRESS`, `PARTIAL_METADATA_RESULTS`, and `MESSAGE_LIMIT_REACHED`.
