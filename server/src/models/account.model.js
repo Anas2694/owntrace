@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 
 const confidenceLevels = ['UNKNOWN', 'POSSIBLE', 'LIKELY', 'CONFIRMED']
+const dormantStatuses = ['UNKNOWN', 'ACTIVE', 'POSSIBLY_DORMANT', 'DORMANT']
 
 const accountSchema = new mongoose.Schema(
   {
@@ -41,6 +42,17 @@ const accountSchema = new mongoose.Schema(
     evidenceClasses: { type: [String], default: [] },
     firstSeenAt: { type: Date, required: true },
     lastSeenAt: { type: Date, required: true },
+    lastOwnershipEvidenceAt: { type: Date, default: null },
+    dormantStatus: {
+      type: String,
+      enum: dormantStatuses,
+      default: 'UNKNOWN',
+    },
+    dormantReason: {
+      type: String,
+      default: 'Dormancy has not been evaluated yet.',
+      maxlength: 240,
+    },
     lastEvaluatedAt: { type: Date, required: true },
     status: {
       type: String,
@@ -64,8 +76,9 @@ const accountSchema = new mongoose.Schema(
 accountSchema.index({ userId: 1, serviceKey: 1 }, { unique: true })
 accountSchema.index({ userId: 1, confidenceScore: -1 })
 accountSchema.index({ userId: 1, lastSeenAt: -1 })
+accountSchema.index({ userId: 1, dormantStatus: 1 })
 
 const Account = mongoose.model('Account', accountSchema)
 
-export { confidenceLevels }
+export { confidenceLevels, dormantStatuses }
 export default Account

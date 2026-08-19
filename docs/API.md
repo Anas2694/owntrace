@@ -95,7 +95,7 @@ Clears the session cookie and returns:
 }
 ```
 
-Account browsing, subscriptions, breaches, and other product APIs remain outside this authentication milestone.
+Subscriptions, breaches, and other product APIs remain outside this authentication milestone.
 
 ## Onboarding
 
@@ -174,3 +174,78 @@ Job states are `QUEUED`, `SCANNING`, `PROCESSING`, `COMPLETED`, `FAILED`, and `C
 A completed bounded sync automatically runs deterministic account discovery. Account browsing endpoints are introduced in the separate accounts milestone.
 
 Safe error codes include `GOOGLE_NOT_CONNECTED`, `GOOGLE_RECONNECT_REQUIRED`, `GOOGLE_RATE_LIMITED`, `GOOGLE_REQUEST_FAILED`, `GMAIL_SYNC_NOT_STARTED`, `GMAIL_SYNC_IN_PROGRESS`, `PARTIAL_METADATA_RESULTS`, and `MESSAGE_LIMIT_REACHED`.
+
+## Accounts
+
+All account endpoints require a valid OwnTrace session and scope every query to the authenticated user. Responses never include provider credentials, raw email bodies, normalized subject signals, Gmail message identifiers, or Google connection identifiers.
+
+### List accounts
+
+`GET /api/accounts`
+
+Supported query parameters:
+
+- `page` (default `1`) and `limit` (default `24`, maximum `100`)
+- `search` for a service name or domain, maximum 80 characters
+- `confidence`: `UNKNOWN`, `POSSIBLE`, `LIKELY`, or `CONFIRMED`
+- `dormant`: `UNKNOWN`, `ACTIVE`, `POSSIBLY_DORMANT`, or `DORMANT`
+- `sort`: `lastSeen`, `firstSeen`, `serviceName`, or `confidence`
+- `direction`: `asc` or `desc`
+
+Response:
+
+```json
+{
+  "success": true,
+  "accounts": [
+    {
+      "id": "...",
+      "serviceName": "Canva",
+      "primaryDomain": "canva.com",
+      "confidenceScore": 93,
+      "confidenceLevel": "CONFIRMED",
+      "evidenceCount": 3,
+      "ownershipEvidenceCount": 2,
+      "dormantStatus": "ACTIVE",
+      "dormantReason": "Account-related evidence was detected within the last 12 months.",
+      "firstSeenAt": "...",
+      "lastSeenAt": "..."
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 24,
+    "total": 1,
+    "pages": 1
+  }
+}
+```
+
+Invalid query controls return `400 INVALID_ACCOUNT_QUERY`.
+
+### Account summary
+
+`GET /api/accounts/summary`
+
+This stable integration contract is intended for clients such as Raphael's dashboard:
+
+```json
+{
+  "success": true,
+  "summary": {
+    "total": 186,
+    "dormant": 47,
+    "possiblyDormant": 18,
+    "highConfidence": 120,
+    "recentlySeen": 32
+  }
+}
+```
+
+`highConfidence` counts scores of 70 or greater. `recentlySeen` counts accounts with any derived signal in the last 90 days. Dormancy uses ownership evidence only.
+
+### Account detail
+
+`GET /api/accounts/:id`
+
+Returns the safe account shape plus up to 100 of its most recent minimized evidence records, `evidenceTotal`, and `evidenceTruncated`. Evidence includes class, weight, ownership flag, reason code, source domain, and occurrence time. Cross-user, missing, and invalid identifiers return `404 ACCOUNT_NOT_FOUND` without revealing whether another user owns the identifier.

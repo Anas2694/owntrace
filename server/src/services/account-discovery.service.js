@@ -3,6 +3,7 @@ import AccountEvidence from '../models/account-evidence.model.js'
 import Account from '../models/account.model.js'
 import GmailSignal from '../models/gmail-signal.model.js'
 import User from '../models/user.model.js'
+import { evaluateDormancy } from './account-dormancy.service.js'
 
 const brandNames = new Map([
   ['adobe.com', 'Adobe'],
@@ -206,6 +207,11 @@ async function discoverAccountsForUser(userId) {
     const ownershipEvidenceCount = classifications.filter(
       (classification) => classification.ownershipSignal,
     ).length
+    const ownershipItems = items.filter((item) => item.classification.ownershipSignal)
+    const lastOwnershipEvidenceAt = ownershipItems.length
+      ? ownershipItems[ownershipItems.length - 1].signal.occurredAt
+      : null
+    const dormancy = evaluateDormancy({ lastOwnershipEvidenceAt, ownershipEvidenceCount })
 
     const account = await Account.findOneAndUpdate(
       { serviceKey: primaryDomain, userId },
@@ -216,11 +222,13 @@ async function discoverAccountsForUser(userId) {
           evidenceClasses,
           evidenceCount: items.length,
           firstSeenAt: occurredDates[0],
+          lastOwnershipEvidenceAt,
           lastEvaluatedAt: new Date(),
           lastSeenAt: occurredDates[occurredDates.length - 1],
           ownershipEvidenceCount,
           primaryDomain,
           serviceName: getServiceName(primaryDomain),
+          ...dormancy,
         },
         $setOnInsert: { serviceKey: primaryDomain, status: 'DISCOVERED', userId },
       },

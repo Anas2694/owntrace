@@ -20,4 +20,6 @@ Google OAuth remains server-side. Provider tokens are encrypted with AES-256-GCM
 
 When a Gmail scan reaches a completed bounded batch, the account-discovery service evaluates all of that user's minimized `GmailSignal` records. Public-suffix-aware domain normalization groups subdomains into deterministic services. Classification produces user-scoped `AccountEvidence` records, and aggregation upserts one `Account` per user and service domain with explainable confidence inputs. Marketing-only evidence is retained as low-confidence context and cannot independently produce likely or confirmed ownership.
 
+The account read layer exposes only user-scoped REST resources. List queries are paginated and allow bounded search, confidence, dormancy, and sorting controls. Detail responses serialize minimized evidence without Gmail message IDs, connection IDs, subjects, or provider credentials. Dormancy is refreshed from the most recent ownership evidence using documented time bands; it remains an inference rather than a claim about the service's current account state.
+
 Privacy-sensitive integrations should store derived metadata instead of full source content wherever possible. Feature boundaries communicate through owned REST APIs rather than duplicated business logic.

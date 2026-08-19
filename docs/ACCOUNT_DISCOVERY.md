@@ -15,7 +15,7 @@ GmailSignal
   -> AccountEvidence and Account upserts
 ```
 
-Account browsing endpoints and frontend screens belong to the following accounts milestone.
+Account browsing endpoints and frontend screens consume these derived records through a separate account read layer; they do not reimplement discovery.
 
 ## Evidence classes
 
@@ -65,6 +65,17 @@ Unique indexes enforce:
 - one evidence record per user and Gmail signal
 
 Repeated discovery runs update the same records instead of duplicating them.
+
+## Dormancy inference
+
+Dormancy uses only the most recent ownership evidence date; marketing-only signals cannot make an account appear active.
+
+- `ACTIVE`: account-related ownership evidence within 12 months
+- `POSSIBLY_DORMANT`: no account-related ownership evidence within 12 months
+- `DORMANT`: no account-related ownership evidence within 24 months
+- `UNKNOWN`: no ownership evidence is available
+
+The account APIs refresh these time-based states before returning account data. The reason is stored and returned with the status. These labels are inferences about observed evidence, not confirmation that an external account is open, used, or closed.
 
 ## Disconnect behavior
 
