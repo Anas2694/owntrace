@@ -9,6 +9,7 @@ import {
   requireTrustedOrigin,
 } from './middleware/security.middleware.js'
 import accountRouter from './routes/account.routes.js'
+import accountActionRouter from './routes/account-action.routes.js'
 import authRouter from './routes/auth.routes.js'
 import googleRouter from './routes/google.routes.js'
 import healthRouter from './routes/health.routes.js'
@@ -30,6 +31,7 @@ app.use('/api/auth', authRouter)
 app.use('/api/google', googleRouter)
 app.use('/api/onboarding', onboardingRouter)
 app.use('/api/accounts', accountRouter)
+app.use('/api/account-actions', accountActionRouter)
 app.use('/api/identity', identityRouter)
 
 app.use(notFoundHandler)

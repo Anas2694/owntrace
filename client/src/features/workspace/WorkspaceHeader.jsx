@@ -27,6 +27,7 @@ function WorkspaceHeader() {
       <nav aria-label="OwnTrace workspace">
         <NavLink to="/accounts">Accounts</NavLink>
         <NavLink to="/identity">Identity</NavLink>
+        <NavLink to="/account-actions">Actions</NavLink>
         <NavLink to="/connect/gmail">Gmail</NavLink>
       </nav>
       <button type="button" onClick={handleLogout} disabled={isSigningOut}>
