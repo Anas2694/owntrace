@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "seed:dashboard-demo": "node src/scripts/seed-dashboard-demo.js",
     "test": "vitest run"
   },
   "engines": {

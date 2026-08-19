@@ -9,6 +9,7 @@ import {
   requireTrustedOrigin,
 } from './middleware/security.middleware.js'
 import authRouter from './routes/auth.routes.js'
+import dashboardRouter from './routes/dashboard.routes.js'
 import healthRouter from './routes/health.routes.js'
 import onboardingRouter from './routes/onboarding.routes.js'
 
@@ -24,6 +25,7 @@ app.use(requireTrustedOrigin)
 
 app.use('/api/health', healthRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/dashboard', dashboardRouter)
 app.use('/api/onboarding', onboardingRouter)
 
 app.use(notFoundHandler)

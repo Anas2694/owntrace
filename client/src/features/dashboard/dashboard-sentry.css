@@ -1,0 +1,179 @@
+.dashboard-app--sentry {
+  --sentry-bg: #1f1633;
+  --sentry-surface: #281d3d;
+  --sentry-surface-strong: #34244d;
+  --sentry-border: #45365c;
+  --sentry-text: #ffffff;
+  --sentry-text-muted: #bdb8c0;
+  --sentry-text-subtle: #81788d;
+  --sentry-lime: #c2ef4e;
+  --sentry-pink: #fa7faa;
+  --sentry-violet: #79628c;
+  --sentry-violet-deep: #422082;
+  --sentry-danger: #ff6f87;
+  --sentry-blood-red: #ff3b30;
+  --sentry-warning: #f2c978;
+  --sentry-font: Rubik, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sentry-display: "Space Grotesk", Rubik, sans-serif;
+  min-height: 100vh;
+  color: var(--sentry-text);
+  background: var(--sentry-bg);
+  font-family: var(--sentry-font);
+}
+
+.dashboard-app--sentry[data-theme="light"] {
+  --sentry-bg: #f8f7fa;
+  --sentry-surface: #ffffff;
+  --sentry-surface-strong: #efecf5;
+  --sentry-border: #e1dce7;
+  --sentry-text: #1f1633;
+  --sentry-text-muted: #766f84;
+  --sentry-text-subtle: #a29baa;
+}
+
+/* Background atmosphere: mostly white, with quiet product-color signals. */
+.dashboard-app--sentry .dashboard-frame {
+  background-color: var(--sentry-bg);
+  background-image:
+    radial-gradient(circle at 76% 15%, rgba(194, 239, 78, .12), transparent 26rem),
+    radial-gradient(circle at 18% 78%, rgba(250, 127, 170, .08), transparent 23rem),
+    linear-gradient(rgba(121, 98, 140, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(121, 98, 140, .035) 1px, transparent 1px);
+  background-size: auto, auto, 32px 32px, 32px 32px;
+  background-position: center, center, center, center;
+}
+.dashboard-app--sentry[data-theme="light"] .dashboard-frame {
+  background-color: #fff;
+  background-image:
+    radial-gradient(circle at 78% 14%, rgba(194, 239, 78, .16), transparent 25rem),
+    radial-gradient(circle at 16% 78%, rgba(250, 127, 170, .09), transparent 22rem),
+    linear-gradient(rgba(66, 32, 130, .028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(66, 32, 130, .028) 1px, transparent 1px);
+}
+.dashboard-app--sentry .dashboard-main { background: transparent; }
+
+/* Shell */
+.dashboard-app--sentry .app-sidebar { width: 244px; padding: 24px 16px 18px; color: var(--sentry-text); background: var(--sentry-bg); border-right: 1px solid var(--sentry-border); }
+.dashboard-app--sentry .brand-lockup { display: flex; align-items: center; gap: 10px; padding: 0 8px 48px; color: var(--sentry-text); font-family: var(--sentry-display); font-size: 21px; font-weight: 700; letter-spacing: -.05em; text-transform: none; }
+.dashboard-app--sentry .brand-mark { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; color: #1f1633; background: var(--sentry-lime); }
+.dashboard-app--sentry .brand-mark svg { display: block; }
+.dashboard-app--sentry .sidebar-label { padding: 0 8px 10px; color: var(--sentry-text-subtle); font-family: var(--sentry-font); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.dashboard-app--sentry .sidebar-link { min-height: 42px; gap: 12px; padding: 0 10px; border: 0; border-radius: 8px; color: var(--sentry-text-muted); font-family: var(--sentry-font); font-size: 14px; letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .sidebar-link > svg { width: 18px; color: currentColor; }
+.dashboard-app--sentry .sidebar-link:hover, .dashboard-app--sentry .sidebar-link:focus-visible { color: var(--sentry-text); background: rgba(255, 255, 255, .07); }
+.dashboard-app--sentry[data-theme="light"] .sidebar-link:hover, .dashboard-app--sentry[data-theme="light"] .sidebar-link:focus-visible { background: var(--sentry-surface-strong); }
+.dashboard-app--sentry .sidebar-link.is-active { color: #1f1633; background: var(--sentry-lime); }
+.dashboard-app--sentry .sidebar-link.is-active > svg { color: #1f1633; }
+.dashboard-app--sentry .sidebar-badge { margin-left: auto; color: currentColor; font-family: var(--sentry-font); font-size: 12px; }
+.dashboard-app--sentry .sidebar-footer > .sidebar-link { margin-bottom: 20px; }
+.dashboard-app--sentry .sidebar-account { border-top-color: var(--sentry-border); }
+.dashboard-app--sentry .account-avatar, .dashboard-app--sentry .topbar-avatar { border: 0; color: #1f1633; background: var(--sentry-pink); font-family: var(--sentry-font); }
+.dashboard-app--sentry .account-copy strong { color: var(--sentry-text); font-family: var(--sentry-font); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .account-copy small { color: var(--sentry-text-muted); font-family: var(--sentry-font); font-size: 10px; }
+.dashboard-app--sentry .sidebar-account > svg { color: var(--sentry-text-muted); }
+.dashboard-app--sentry .dashboard-frame { width: calc(100% - 244px); margin-left: 244px; background: var(--sentry-bg); }
+.dashboard-app--sentry .sentry-bottom-blur { position: fixed; z-index: 30; right: 0; bottom: 0; left: 244px; height: 96px; pointer-events: none; }
+.dashboard-app--sentry .sentry-bottom-blur .gradual-blur { height: 96px !important; }
+.dashboard-app--sentry.is-sidebar-open .sentry-bottom-blur { display: none; }
+.dashboard-app--sentry .dashboard-topbar { position: sticky; z-index: 10; top: 16px; width: calc(100% - 32px); height: 64px; margin: 16px 16px 0; padding: 0 24px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 16px; background: rgba(31, 22, 51, .72); backdrop-filter: blur(20px) saturate(130%); box-shadow: 0 12px 32px rgba(8, 4, 18, .18); }
+.dashboard-app--sentry[data-theme="light"] .dashboard-topbar { border-color: rgba(31, 22, 51, .12); background: rgba(255, 255, 255, .74); box-shadow: 0 12px 32px rgba(31, 22, 51, .08); }
+.dashboard-app--sentry .breadcrumb { color: var(--sentry-text-muted); font-family: var(--sentry-font); font-size: 13px; letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .breadcrumb strong { color: var(--sentry-text); font-weight: 600; }
+.dashboard-app--sentry .breadcrumb-slash { color: var(--sentry-text-subtle); }
+.dashboard-app--sentry .topbar-actions { gap: 10px; }
+.dashboard-app--sentry .icon-button { color: var(--sentry-text-muted); border: 1px solid transparent; border-radius: 8px; }
+.dashboard-app--sentry .icon-button:hover { color: var(--sentry-text); background: var(--sentry-surface-strong); border-color: var(--sentry-border); }
+.dashboard-app--sentry .notification-button > span { background: var(--sentry-pink); }
+.dashboard-app--sentry .theme-toggle { display: inline-flex !important; min-height: 36px; align-items: center; padding: 8px 12px; border: 1px solid var(--sentry-border); border-radius: 8px; color: var(--sentry-text-muted); background: transparent; font-family: var(--sentry-font); font-size: 12px; white-space: nowrap; cursor: pointer; }
+.dashboard-app--sentry .theme-toggle:hover { color: var(--sentry-text); background: var(--sentry-surface-strong); }
+
+/* Page header */
+.dashboard-app--sentry .dashboard-main { width: min(100%, 1320px); padding: 42px clamp(24px, 5vw, 64px) 72px; background: var(--sentry-bg); }
+.dashboard-app--sentry .dashboard-heading { align-items: flex-end; gap: 32px; margin-bottom: 28px; padding: 0 0 28px; border-bottom: 1px solid var(--sentry-border); }
+.dashboard-app--sentry .dashboard-heading h1 { max-width: 16ch; margin: 0; color: var(--sentry-text); font-family: var(--sentry-display); font-size: clamp(38px, 5vw, 58px); font-weight: 500; letter-spacing: -.045em; line-height: 1.05; text-transform: none; }
+.dashboard-app--sentry .dashboard-subtitle { margin-top: 12px; color: var(--sentry-text-muted); font-family: var(--sentry-font); font-size: 16px; line-height: 1.5; }
+.dashboard-app--sentry .section-eyebrow { margin-bottom: 8px; color: var(--sentry-lime); font-family: var(--sentry-font); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.dashboard-app--sentry .primary-button { min-height: 44px; color: #1f1633; background: var(--sentry-lime); border-color: var(--sentry-lime); border-radius: 8px; font-family: var(--sentry-font); font-size: 14px; letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .primary-button:hover { background: #d5f778; }
+
+/* Shared card grammar */
+.dashboard-app--sentry .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 32px; border: 0; }
+.dashboard-app--sentry .dashboard-card, .dashboard-app--sentry .stat-card { border: 1px solid var(--sentry-border); border-radius: 12px; background: var(--sentry-surface); }
+.dashboard-app--sentry .stat-card, .dashboard-app--sentry .stat-card:not(:first-child) { min-height: 154px; margin: 0; padding: 18px; border-right: 1px solid var(--sentry-border); }
+.dashboard-app--sentry .stat-card:hover { border-color: var(--sentry-violet); transform: translateY(-2px); }
+.dashboard-app--sentry .stat-icon { display: grid; width: 34px; height: 34px; margin-bottom: 16px; place-items: center; border-radius: 8px; color: var(--sentry-lime); background: rgba(194, 239, 78, .12); }
+.dashboard-app--sentry .stat-card--pink .stat-icon, .dashboard-app--sentry .stat-card--danger .stat-icon { color: var(--sentry-pink); background: rgba(250, 127, 170, .12); }
+.dashboard-app--sentry .stat-content { gap: 6px; }
+.dashboard-app--sentry .stat-content > span, .dashboard-app--sentry .stat-content > small { color: var(--sentry-text-muted); font-family: var(--sentry-font); font-size: 12px; letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .stat-content strong { color: var(--sentry-text); font-family: var(--sentry-display); font-size: 36px; font-weight: 500; letter-spacing: -.04em; }
+.dashboard-app--sentry .stat-content small { color: var(--sentry-text-subtle); font-size: 11px; }
+.dashboard-app--sentry .stat-arrow { top: 18px; right: 18px; color: var(--sentry-text-subtle); }
+
+.dashboard-app--sentry .dashboard-grid { gap: 12px; margin-bottom: 32px; }
+.dashboard-app--sentry .dashboard-grid--top, .dashboard-app--sentry .dashboard-grid--bottom { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.dashboard-app--sentry .health-card, .dashboard-app--sentry .footprint-card, .dashboard-app--sentry .actions-card, .dashboard-app--sentry .activity-card { min-width: 0; padding: 20px; border: 1px solid var(--sentry-border); border-radius: 12px; background: var(--sentry-surface); }
+.dashboard-app--sentry .footprint-card { background: var(--sentry-surface-strong); }
+.dashboard-app--sentry .actions-card { background: var(--sentry-surface); }
+.dashboard-app--sentry .activity-card { background: var(--sentry-surface-strong); }
+.dashboard-app--sentry .dashboard-grid > * + * { padding: 20px; border: 1px solid var(--sentry-border); }
+.dashboard-app--sentry .card-heading-row { padding-bottom: 16px; border-bottom: 1px solid var(--sentry-border); }
+.dashboard-app--sentry .card-heading-row h2 { color: var(--sentry-text); font-family: var(--sentry-font); font-size: 22px; font-weight: 500; letter-spacing: -.25px; text-transform: none; }
+.dashboard-app--sentry .card-link, .dashboard-app--sentry .text-link { color: var(--sentry-lime); font-family: var(--sentry-font); font-size: 12px; letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .health-body { align-items: center; margin: 24px 0; }
+.dashboard-app--sentry .score-ring-track { stroke: var(--sentry-border); }
+.dashboard-app--sentry .score-ring-value { stroke: var(--sentry-lime); }
+.dashboard-app--sentry .score-ring strong { color: var(--sentry-text); font-family: var(--sentry-display); font-size: 36px; font-weight: 500; letter-spacing: -.04em; }
+.dashboard-app--sentry .score-ring span { color: var(--sentry-text-muted); font-family: var(--sentry-font); letter-spacing: 0; }
+.dashboard-app--sentry .health-copy p { color: var(--sentry-text-muted); font-family: var(--sentry-font); font-size: 14px; }
+.dashboard-app--sentry .health-meter { height: 4px; background: var(--sentry-border); }
+.dashboard-app--sentry .health-meter span { height: 4px; background: var(--sentry-lime); }
+.dashboard-app--sentry .health-scale { color: var(--sentry-text-subtle); font-family: var(--sentry-font); letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .status-badge { padding: 4px 8px; border-radius: 5px; color: var(--sentry-text-muted); background: var(--sentry-surface-strong); font-family: var(--sentry-font); font-size: 11px; letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .status-badge--good { color: #1f1633; background: var(--sentry-lime); }
+.dashboard-app--sentry .status-badge--high { color: #fff; background: var(--sentry-blood-red); }
+.dashboard-app--sentry .status-badge--medium { color: #1f1633; background: var(--sentry-warning); }
+.dashboard-app--sentry .trend-summary strong { color: var(--sentry-text); font-family: var(--sentry-display); font-size: 36px; font-weight: 500; letter-spacing: -.04em; }
+.dashboard-app--sentry .trend-summary span, .dashboard-app--sentry .chart-labels { color: var(--sentry-text-muted); font-family: var(--sentry-font); letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .trend-area { fill: rgba(194, 239, 78, .12); }
+.dashboard-app--sentry .trend-line { stroke: var(--sentry-lime); stroke-width: 2; }
+.dashboard-app--sentry .action-item, .dashboard-app--sentry .activity-item { gap: 12px; border-top-color: var(--sentry-border); }
+.dashboard-app--sentry .priority-dot--high { background: var(--sentry-blood-red); }
+.dashboard-app--sentry .priority-dot--medium { background: var(--sentry-warning); }
+.dashboard-app--sentry .action-title-row strong, .dashboard-app--sentry .activity-copy strong { color: var(--sentry-text); font-family: var(--sentry-font); font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .action-copy p { color: var(--sentry-text-muted); font-family: var(--sentry-font); font-size: 13px; }
+.dashboard-app--sentry .action-button, .dashboard-app--sentry .show-more { color: var(--sentry-lime); font-family: var(--sentry-font); letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .activity-copy span, .dashboard-app--sentry .activity-item time { color: var(--sentry-text-muted); font-family: var(--sentry-font); letter-spacing: 0; text-transform: none; }
+.dashboard-app--sentry .pagination-controls { border-top-color: var(--sentry-border); color: var(--sentry-text-muted); font-family: var(--sentry-font); }
+.dashboard-app--sentry .pagination-buttons button { border-color: var(--sentry-border); color: var(--sentry-text-muted); background: transparent; font-family: var(--sentry-font); }
+.dashboard-app--sentry .pagination-buttons button:hover:not(:disabled), .dashboard-app--sentry .pagination-buttons button:focus-visible { border-color: var(--sentry-lime); color: var(--sentry-lime); }
+
+@media (max-width: 1100px) {
+  .dashboard-app--sentry .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .dashboard-app--sentry .dashboard-grid--top, .dashboard-app--sentry .dashboard-grid--bottom { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 767px) {
+  .dashboard-app--sentry .app-sidebar { transform: translateX(-100%); transition: transform 200ms ease; }
+  .dashboard-app--sentry .app-sidebar.is-open { transform: translateX(0); }
+  .dashboard-app--sentry .sidebar-backdrop.is-visible { display: block; background: rgba(21, 15, 35, .72); }
+  .dashboard-app--sentry .dashboard-frame { width: 100%; margin-left: 0; }
+  .dashboard-app--sentry .sentry-bottom-blur { left: 0; height: 72px; }
+  .dashboard-app--sentry .sentry-bottom-blur .gradual-blur { height: 72px !important; }
+  .dashboard-app--sentry .menu-button { display: grid; }
+  .dashboard-app--sentry .dashboard-main { padding: 32px 16px 56px; }
+  .dashboard-app--sentry .dashboard-heading { align-items: flex-start; margin-bottom: 24px; }
+  .dashboard-app--sentry .dashboard-heading h1 { font-size: clamp(38px, 12vw, 56px); }
+  .dashboard-app--sentry .primary-button { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 520px) {
+  .dashboard-app--sentry .stats-grid { grid-template-columns: 1fr; }
+  .dashboard-app--sentry .stat-card, .dashboard-app--sentry .stat-card:not(:first-child) { min-height: auto; margin: 0; }
+  .dashboard-app--sentry .stat-card + .stat-card { margin-top: 10px; }
+  .dashboard-app--sentry .health-card, .dashboard-app--sentry .footprint-card, .dashboard-app--sentry .actions-card, .dashboard-app--sentry .activity-card { padding: 16px; }
+  .dashboard-app--sentry .dashboard-grid > * + * { padding: 16px; }
+  .dashboard-app--sentry .theme-toggle { display: inline-flex !important; min-height: 32px; align-items: center; padding: 6px 8px; font-size: 10px; white-space: nowrap; }
+}

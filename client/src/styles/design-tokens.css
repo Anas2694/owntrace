@@ -1,0 +1,32 @@
+/* OwnTrace visual language. Edit this file to re-skin the product globally. */
+:root {
+  --ot-primary: #ffffff;
+  --ot-ink: #ffffff;
+  --ot-body: #cccccc;
+  --ot-body-strong: #e6e6e6;
+  --ot-muted: #999999;
+  --ot-muted-soft: #666666;
+  --ot-canvas: #000000;
+  --ot-surface-soft: #0d0d0d;
+  --ot-surface-card: #141414;
+  --ot-surface-elevated: #1f1f1f;
+  --ot-hairline: #262626;
+  --ot-hairline-strong: #3a3a3a;
+  --ot-link: #c3d9f3;
+  --ot-warning: #d4a017;
+  --ot-success: #5fa657;
+  --ot-font-display: "Saira Condensed", "Arial Narrow", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ot-font-text: "Cormorant Garamond", Garamond, "Times New Roman", serif;
+  --ot-font-mono: "JetBrains Mono", "Cascadia Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --ot-radius-card: 0px;
+  --ot-radius-pill: 9999px;
+  --ot-radius-full: 50%;
+  --ot-space-1: 4px;
+  --ot-space-2: 8px;
+  --ot-space-3: 12px;
+  --ot-space-4: 16px;
+  --ot-space-5: 24px;
+  --ot-space-6: 40px;
+  --ot-space-7: 64px;
+  --ot-sidebar-width: 224px;
+}

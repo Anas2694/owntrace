@@ -1,0 +1,25 @@
+.gradual-blur {
+  position: relative;
+  overflow: hidden;
+}
+
+.gradual-blur__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.gradual-blur__layers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.gradual-blur__layer {
+  position: absolute;
+  inset: 0;
+}

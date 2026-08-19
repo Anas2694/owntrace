@@ -4,7 +4,7 @@ import LoginPage from './features/auth/LoginPage.jsx'
 import ProtectedRoute from './features/auth/ProtectedRoute.jsx'
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute.jsx'
 import RegisterPage from './features/auth/RegisterPage.jsx'
-import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx'
+import DashboardPage from './features/dashboard/DashboardPage.jsx'
 import LandingPage from './features/landing/LandingPage.jsx'
 import GmailConnectionHandoff from './features/onboarding/GmailConnectionHandoff.jsx'
 import OnboardingPage from './features/onboarding/OnboardingPage.jsx'
@@ -23,7 +23,14 @@ function App() {
         path="/connect/gmail"
         element={<ProtectedRoute><GmailConnectionHandoff /></ProtectedRoute>}
       />
-      <Route path="/dashboard" element={<DashboardPlaceholder />} />
+      <Route
+        path="/dashboard"
+        element={<ProtectedRoute><DashboardPage variant="sentry" /></ProtectedRoute>}
+      />
+      <Route
+        path="/dashboard-preview-sentry"
+        element={<DashboardPage previewUser={{ name: 'Megh Mayur', email: 'preview@owntrace.local' }} variant="sentry" />}
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
