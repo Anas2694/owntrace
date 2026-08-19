@@ -33,16 +33,24 @@ function GoogleMark() {
 
 function GmailConnectionPage() {
   const { restoreSession } = useAuth()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const titleRef = useRef(null)
   const stopSyncRef = useRef(false)
+  const [callbackStatus] = useState(() => searchParams.get('google'))
   const [googleState, setGoogleState] = useState({ available: false, connection: null })
   const [sync, setSync] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [error, setError] = useState('')
-  const callbackStatus = searchParams.get('google')
+
+  useEffect(() => {
+    if (!searchParams.has('google')) return
+
+    const nextSearchParams = new URLSearchParams(searchParams)
+    nextSearchParams.delete('google')
+    setSearchParams(nextSearchParams, { replace: true })
+  }, [searchParams, setSearchParams])
 
   async function loadConnection() {
     setIsLoading(true)
