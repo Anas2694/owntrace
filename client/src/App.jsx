@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
+import AccountDetailPage from './features/accounts/AccountDetailPage.jsx'
+import AccountsPage from './features/accounts/AccountsPage.jsx'
 import LoginPage from './features/auth/LoginPage.jsx'
 import ProtectedRoute from './features/auth/ProtectedRoute.jsx'
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute.jsx'
@@ -22,6 +24,11 @@ function App() {
       <Route
         path="/connect/gmail"
         element={<ProtectedRoute><GmailConnectionPage /></ProtectedRoute>}
+      />
+      <Route path="/accounts" element={<ProtectedRoute><AccountsPage /></ProtectedRoute>} />
+      <Route
+        path="/accounts/:id"
+        element={<ProtectedRoute><AccountDetailPage /></ProtectedRoute>}
       />
       <Route path="/dashboard" element={<DashboardPlaceholder />} />
       <Route path="*" element={<Navigate to="/" replace />} />

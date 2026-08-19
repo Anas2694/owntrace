@@ -8,6 +8,7 @@ import {
   createCorsOptions,
   requireTrustedOrigin,
 } from './middleware/security.middleware.js'
+import accountRouter from './routes/account.routes.js'
 import authRouter from './routes/auth.routes.js'
 import googleRouter from './routes/google.routes.js'
 import healthRouter from './routes/health.routes.js'
@@ -27,6 +28,7 @@ app.use('/api/health', healthRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/google', googleRouter)
 app.use('/api/onboarding', onboardingRouter)
+app.use('/api/accounts', accountRouter)
 
 app.use(notFoundHandler)
 app.use(errorHandler)
