@@ -34,7 +34,7 @@ The sync does not request or store bodies, snippets, raw MIME, or attachments. S
 - a normalized subject signal with email addresses and long numeric strings redacted
 - the provider message date
 
-Disconnect revokes the provider token before deleting the connection, current job, and derived signals. If Google cannot be reached, OwnTrace preserves local state and asks the user to retry so it does not falsely claim access was revoked.
+Disconnect revokes the provider token before deleting the connection, current job, derived signals, Gmail-derived account evidence, and accounts with no remaining evidence. If Google cannot be reached, OwnTrace preserves local state and asks the user to retry so it does not falsely claim access was revoked.
 
 ## Local configuration
 

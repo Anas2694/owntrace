@@ -95,7 +95,7 @@ Clears the session cookie and returns:
 }
 ```
 
-Gmail, accounts, subscriptions, breaches, and other product APIs remain outside this authentication milestone.
+Account browsing, subscriptions, breaches, and other product APIs remain outside this authentication milestone.
 
 ## Onboarding
 
@@ -158,7 +158,7 @@ Validates the session-bound state, exchanges the code on the server, verifies th
 
 `DELETE /api/google/connection`
 
-Attempts Google token revocation, then deletes the authenticated user's connection, sync state, and derived Gmail signals. A provider network failure returns `502 GOOGLE_REVOCATION_FAILED` without deleting local state so revocation can be retried.
+Attempts Google token revocation, then deletes the authenticated user's connection, sync state, derived Gmail signals, Gmail-derived account evidence, and accounts with no remaining evidence. A provider network failure returns `502 GOOGLE_REVOCATION_FAILED` without deleting local state so revocation can be retried.
 
 ## Gmail metadata sync
 
@@ -170,5 +170,7 @@ The sync is split into bounded requests. Every route is scoped to the authentica
 - `DELETE /api/google/sync` — cancel an active job without deleting previously derived signals.
 
 Job states are `QUEUED`, `SCANNING`, `PROCESSING`, `COMPLETED`, `FAILED`, and `CANCELLED`. Progress includes processed/stored counts and an estimated mailbox total; provider page tokens remain server-only. Repeated scans upsert by a user-scoped HMAC message identifier and do not duplicate signals. Starting another scan or advancing a second batch while one is active returns `409 GMAIL_SYNC_IN_PROGRESS` so concurrent browser tabs cannot reset or double-count progress. A stale batch lock can be reclaimed after an interrupted worker.
+
+A completed bounded sync automatically runs deterministic account discovery. Account browsing endpoints are introduced in the separate accounts milestone.
 
 Safe error codes include `GOOGLE_NOT_CONNECTED`, `GOOGLE_RECONNECT_REQUIRED`, `GOOGLE_RATE_LIMITED`, `GOOGLE_REQUEST_FAILED`, `GMAIL_SYNC_NOT_STARTED`, `GMAIL_SYNC_IN_PROGRESS`, `PARTIAL_METADATA_RESULTS`, and `MESSAGE_LIMIT_REACHED`.

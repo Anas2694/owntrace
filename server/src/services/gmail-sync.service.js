@@ -5,6 +5,7 @@ import GmailSignal from '../models/gmail-signal.model.js'
 import GmailSyncJob from '../models/gmail-sync-job.model.js'
 import GoogleConnection from '../models/google-connection.model.js'
 import AppError from '../utils/app-error.js'
+import { discoverAccountsForUser } from './account-discovery.service.js'
 import { withGoogleClient } from './google-client.service.js'
 
 const BATCH_SIZE = 25
@@ -203,7 +204,7 @@ async function processNextBatch(userId) {
   }
 
   try {
-    return await withGoogleClient(userId, async ({ connection, oauthClient }) => {
+    const updatedJob = await withGoogleClient(userId, async ({ connection, oauthClient }) => {
       const gmail = google.gmail({ auth: oauthClient, version: 'v1' })
       const listResponse = await gmail.users.messages.list({
         maxResults: BATCH_SIZE,
@@ -299,6 +300,9 @@ async function processNextBatch(userId) {
 
       return updatedJob
     })
+
+    if (updatedJob?.status === 'COMPLETED') await discoverAccountsForUser(userId)
+    return updatedJob
   } catch (error) {
     await GmailSyncJob.updateOne(
       { _id: job.id, status: { $ne: 'CANCELLED' }, userId },

@@ -14,6 +14,7 @@ import GmailSyncJob from '../models/gmail-sync-job.model.js'
 import User from '../models/user.model.js'
 import AppError from '../utils/app-error.js'
 import { decryptSecret, encryptSecret } from '../utils/encryption.js'
+import { removeConnectionDiscoveries } from './account-discovery.service.js'
 
 const GOOGLE_STATE_AUDIENCE = `${TOKEN_AUDIENCE}:google-oauth`
 const GOOGLE_STATE_ISSUER = `${TOKEN_ISSUER}:google-oauth`
@@ -182,6 +183,7 @@ async function disconnectGoogle(userId) {
     }
   }
 
+  await removeConnectionDiscoveries(userId, connection.id)
   await Promise.all([
     GmailSignal.deleteMany({ connectionId: connection.id, userId }),
     GmailSyncJob.deleteMany({ connectionId: connection.id, userId }),
