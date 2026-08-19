@@ -24,4 +24,6 @@ The account read layer exposes only user-scoped REST resources. List queries are
 
 The identity graph is a read-time projection over the authenticated user, safe Google connection metadata, accounts, and evidence provenance. Deterministic typed nodes and edges avoid a separate graph database. The summary reports complete counts while the visual graph caps account nodes at 200; the paginated Accounts API remains the full inventory interface.
 
+Account cleanup is a separate account-owned recommendation layer. It generates idempotent user/account/type records from confidence, dormancy, and evidence classes, preserves user-managed lifecycle states, and removes open recommendations that no longer apply. Its REST contract is intentionally separate from Raphael-owned global inbox and request workflows.
+
 Privacy-sensitive integrations should store derived metadata instead of full source content wherever possible. Feature boundaries communicate through owned REST APIs rather than duplicated business logic.

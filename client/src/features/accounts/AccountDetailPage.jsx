@@ -132,6 +132,9 @@ function AccountDetailPage() {
                 <div className="account-recommendation">
                   <strong>Recommended next step</strong>
                   <p>{getRecommendation(account)}</p>
+                  <Link className="account-actions-link" to={`/account-actions?accountId=${account.id}`}>
+                    View account actions
+                  </Link>
                 </div>
                 <small>
                   OwnTrace does not claim it can delete this account or confirm its current state. These are evidence-based suggestions.

@@ -569,6 +569,22 @@
   line-height: 1.55;
 }
 
+.account-actions-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  margin-top: 0.65rem;
+  color: var(--color-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.account-actions-link:focus-visible {
+  outline: 3px solid var(--color-accent-strong);
+  outline-offset: 3px;
+}
+
 .accounts-detail-loading {
   min-height: 70vh;
 }

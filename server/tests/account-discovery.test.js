@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { describe, expect, it } from 'vitest'
+import AccountAction from '../src/models/account-action.model.js'
 import AccountEvidence from '../src/models/account-evidence.model.js'
 import Account from '../src/models/account.model.js'
 import GmailSignal from '../src/models/gmail-signal.model.js'
@@ -208,8 +209,10 @@ describe('account discovery', () => {
     await removeConnectionDiscoveries(firstUser.id, firstConnection.id)
 
     expect(await Account.countDocuments({ userId: firstUser.id })).toBe(0)
+    expect(await AccountAction.countDocuments({ userId: firstUser.id })).toBe(0)
     expect(await AccountEvidence.countDocuments({ userId: firstUser.id })).toBe(0)
     expect(await Account.countDocuments({ userId: secondUser.id })).toBe(1)
+    expect(await AccountAction.countDocuments({ userId: secondUser.id })).toBeGreaterThan(0)
     expect(await AccountEvidence.countDocuments({ userId: secondUser.id })).toBe(1)
   })
 

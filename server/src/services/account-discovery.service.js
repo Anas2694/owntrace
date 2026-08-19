@@ -1,8 +1,10 @@
 import { getDomain } from 'tldts'
+import AccountAction from '../models/account-action.model.js'
 import AccountEvidence from '../models/account-evidence.model.js'
 import Account from '../models/account.model.js'
 import GmailSignal from '../models/gmail-signal.model.js'
 import User from '../models/user.model.js'
+import { syncAccountActionsForUser } from './account-action.service.js'
 import { evaluateDormancy } from './account-dormancy.service.js'
 
 const brandNames = new Map([
@@ -260,6 +262,7 @@ async function discoverAccountsForUser(userId) {
   }
 
   await User.updateOne({ _id: userId }, { $set: { onboardingStatus: 'COMPLETED' } })
+  await syncAccountActionsForUser(userId)
 
   return {
     accountCount: groups.size,
@@ -276,7 +279,12 @@ async function removeConnectionDiscoveries(userId, connectionId) {
 
   for (const accountId of accountIds) {
     const remainingEvidence = await AccountEvidence.exists({ accountId, userId })
-    if (!remainingEvidence) await Account.deleteOne({ _id: accountId, userId })
+    if (!remainingEvidence) {
+      await Promise.all([
+        AccountAction.deleteMany({ accountId, userId }),
+        Account.deleteOne({ _id: accountId, userId }),
+      ])
+    }
   }
 }
 

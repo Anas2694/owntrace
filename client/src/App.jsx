@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
+import AccountActionsPage from './features/account-actions/AccountActionsPage.jsx'
 import AccountDetailPage from './features/accounts/AccountDetailPage.jsx'
 import AccountsPage from './features/accounts/AccountsPage.jsx'
 import LoginPage from './features/auth/LoginPage.jsx'
@@ -32,6 +33,10 @@ function App() {
         element={<ProtectedRoute><AccountDetailPage /></ProtectedRoute>}
       />
       <Route path="/identity" element={<ProtectedRoute><IdentityPage /></ProtectedRoute>} />
+      <Route
+        path="/account-actions"
+        element={<ProtectedRoute><AccountActionsPage /></ProtectedRoute>}
+      />
       <Route path="/dashboard" element={<DashboardPlaceholder />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

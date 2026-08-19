@@ -158,7 +158,7 @@ Validates the session-bound state, exchanges the code on the server, verifies th
 
 `DELETE /api/google/connection`
 
-Attempts Google token revocation, then deletes the authenticated user's connection, sync state, derived Gmail signals, Gmail-derived account evidence, and accounts with no remaining evidence. A provider network failure returns `502 GOOGLE_REVOCATION_FAILED` without deleting local state so revocation can be retried.
+Attempts Google token revocation, then deletes the authenticated user's connection, sync state, derived Gmail signals, Gmail-derived account evidence, actions for accounts that are removed, and accounts with no remaining evidence. A provider network failure returns `502 GOOGLE_REVOCATION_FAILED` without deleting local state so revocation can be retried.
 
 ## Gmail metadata sync
 
@@ -294,3 +294,54 @@ Requires a valid OwnTrace session. Returns a derived graph containing typed `nod
 Node types are `PROFILE`, `EMAIL_IDENTITY`, `GOOGLE_IDENTITY`, `ACCOUNT`, and `SERVICE`. Edge types are `AUTHENTICATES_AS`, `CONNECTED_IDENTITY`, `DISCOVERED_ACCOUNT`, `HAS_ACCOUNT_EVIDENCE`, and `BELONGS_TO_SERVICE`.
 
 The summary reports full counts. Node rendering is capped at the 200 highest-confidence accounts; `truncated` indicates when the cap applies. Provider IDs, OAuth tokens, Gmail identifiers, connection identifiers, raw subjects, and raw evidence are never returned.
+
+## Account actions
+
+Account actions are account-owned cleanup recommendations, not Raphael's Privacy Inbox or privacy-request system. All endpoints require a valid OwnTrace session and scope reads/updates to the authenticated user.
+
+### List actions
+
+`GET /api/account-actions`
+
+Query parameters:
+
+- `status`: `OPEN` (default), `IN_PROGRESS`, `COMPLETED`, or `DISMISSED`
+- `accountId`: optional user-owned account filter
+- `page` (default `1`) and `limit` (default `24`, maximum `100`)
+
+Each action includes its type, title, description, explanation, priority, lifecycle status, timestamps, and safe account display metadata. Recommendation types are `REVIEW_ACCOUNT`, `SECURE_ACCOUNT`, `REVIEW_SIGN_IN`, and `CONSIDER_DELETION`. Responses do not include provider credentials, provider identifiers, raw evidence, Gmail identifiers, or subjects.
+
+Invalid filters return `400 INVALID_ACCOUNT_ACTION_QUERY`.
+
+### Action summary
+
+`GET /api/account-actions/summary`
+
+```json
+{
+  "success": true,
+  "summary": {
+    "open": 8,
+    "inProgress": 2,
+    "completed": 5,
+    "dismissed": 1,
+    "highPriority": 1
+  }
+}
+```
+
+`highPriority` counts high-priority actions that are open or in progress.
+
+### Update action status
+
+`PATCH /api/account-actions/:id`
+
+Request:
+
+```json
+{
+  "status": "COMPLETED"
+}
+```
+
+Supported transitions allow open work to start, complete, or dismiss; in-progress work to reopen, complete, or dismiss; and completed/dismissed work to reopen. Repeating the current status is idempotent. Invalid statuses return `400 INVALID_ACCOUNT_ACTION_STATUS`, unsupported transitions return `409 ACCOUNT_ACTION_TRANSITION_NOT_ALLOWED`, and invalid, missing, or cross-user IDs return `404 ACCOUNT_ACTION_NOT_FOUND`.

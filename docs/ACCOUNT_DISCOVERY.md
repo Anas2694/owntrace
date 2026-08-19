@@ -77,6 +77,8 @@ Dormancy uses only the most recent ownership evidence date; marketing-only signa
 
 The account APIs refresh these time-based states before returning account data. The reason is stored and returned with the status. These labels are inferences about observed evidence, not confirmation that an external account is open, used, or closed.
 
+Completed discovery also refreshes deterministic account-action recommendations. Recommendation generation is idempotent and remains a separate layer from discovery scoring.
+
 ## Disconnect behavior
 
-Google disconnect first revokes provider access. It then removes the connection's Gmail signals and account evidence. An account is removed only when no evidence remains for that user and account.
+Google disconnect first revokes provider access. It then removes the connection's Gmail signals and account evidence. An account is removed only when no evidence remains for that user and account; actions belonging to a removed account are deleted with it.

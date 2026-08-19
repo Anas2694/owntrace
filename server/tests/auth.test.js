@@ -7,6 +7,7 @@ import app from '../src/app.js'
 import { TOKEN_AUDIENCE, TOKEN_ISSUER, getJwtSecret } from '../src/config/auth.js'
 import { GMAIL_METADATA_SCOPE } from '../src/config/google.js'
 import { requireTrustedOrigin } from '../src/middleware/security.middleware.js'
+import AccountAction from '../src/models/account-action.model.js'
 import AccountEvidence from '../src/models/account-evidence.model.js'
 import Account from '../src/models/account.model.js'
 import GoogleConnection from '../src/models/google-connection.model.js'
@@ -24,6 +25,7 @@ const validRegistration = {
 beforeAll(async () => {
   await Promise.all([
     User.init(),
+    AccountAction.init(),
     Account.init(),
     AccountEvidence.init(),
     GoogleConnection.init(),
@@ -451,12 +453,14 @@ describe('authentication API', () => {
       expect(JSON.stringify(signals)).not.toContain('123456')
       expect(await Account.countDocuments({ userId: user.id })).toBe(1)
       expect(await AccountEvidence.countDocuments({ userId: user.id })).toBe(2)
+      expect(await AccountAction.countDocuments({ userId: user.id })).toBe(1)
       expect((await User.findById(user.id)).onboardingStatus).toBe('COMPLETED')
 
       await agent.post('/api/google/sync').expect(202)
       const repeatedScan = await agent.post('/api/google/sync/next').expect(200)
       expect(repeatedScan.body.sync.storedCount).toBe(0)
       expect(await GmailSignal.countDocuments({ userId: user.id })).toBe(2)
+      expect(await AccountAction.countDocuments({ userId: user.id })).toBe(1)
     })
 
     it('returns safe rate-limit state and preserves sync progress', async () => {
