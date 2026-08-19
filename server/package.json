@@ -21,7 +21,8 @@
     "googleapis": "^174.0.1",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.9.2"
+    "mongoose": "^9.9.2",
+    "tldts": "^7.4.10"
   },
   "devDependencies": {
     "mongodb-memory-server": "^11.2.0",

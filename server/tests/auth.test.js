@@ -7,6 +7,8 @@ import app from '../src/app.js'
 import { TOKEN_AUDIENCE, TOKEN_ISSUER, getJwtSecret } from '../src/config/auth.js'
 import { GMAIL_METADATA_SCOPE } from '../src/config/google.js'
 import { requireTrustedOrigin } from '../src/middleware/security.middleware.js'
+import AccountEvidence from '../src/models/account-evidence.model.js'
+import Account from '../src/models/account.model.js'
 import GoogleConnection from '../src/models/google-connection.model.js'
 import GmailSignal from '../src/models/gmail-signal.model.js'
 import GmailSyncJob from '../src/models/gmail-sync-job.model.js'
@@ -22,6 +24,8 @@ const validRegistration = {
 beforeAll(async () => {
   await Promise.all([
     User.init(),
+    Account.init(),
+    AccountEvidence.init(),
     GoogleConnection.init(),
     GmailSignal.init(),
     GmailSyncJob.init(),
@@ -276,7 +280,10 @@ describe('authentication API', () => {
 
       expect(encrypted).not.toContain('provider-token-value')
       expect(decryptSecret(encrypted)).toBe('provider-token-value')
-      expect(() => decryptSecret(`${encrypted.slice(0, -1)}x`)).toThrow()
+      const tamperedParts = encrypted.split('.')
+      const replacement = tamperedParts[3].startsWith('A') ? 'B' : 'A'
+      tamperedParts[3] = `${replacement}${tamperedParts[3].slice(1)}`
+      expect(() => decryptSecret(tamperedParts.join('.'))).toThrow()
     })
 
     it('returns a safe unconnected status for the authenticated user', async () => {
@@ -442,6 +449,9 @@ describe('authentication API', () => {
       })
       expect(JSON.stringify(signals)).not.toContain('provider-message-1')
       expect(JSON.stringify(signals)).not.toContain('123456')
+      expect(await Account.countDocuments({ userId: user.id })).toBe(1)
+      expect(await AccountEvidence.countDocuments({ userId: user.id })).toBe(2)
+      expect((await User.findById(user.id)).onboardingStatus).toBe('COMPLETED')
 
       await agent.post('/api/google/sync').expect(202)
       const repeatedScan = await agent.post('/api/google/sync/next').expect(200)
