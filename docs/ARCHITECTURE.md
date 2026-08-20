@@ -16,4 +16,14 @@ Authentication uses a minimal MongoDB `User` record and a signed JWT stored only
 
 Onboarding is a small, server-enforced progression on the user record: `NOT_STARTED → PRIVACY_REVIEWED → GMAIL_PENDING`. It explains data access and minimization before handing off to Gmail connection, without starting OAuth or creating a general workflow engine.
 
+Google OAuth remains server-side. Provider tokens are encrypted with AES-256-GCM, never serialized to the client, and associated through Google's verified stable OpenID `sub`. Gmail ingestion uses resumable 25-message API batches and stores only HMAC provider identifiers plus minimized header-derived signals. `GmailSyncJob` persists safe progress without an external queue; the browser can resume an interrupted queued job.
+
+When a Gmail scan reaches a completed bounded batch, the account-discovery service evaluates all of that user's minimized `GmailSignal` records. Public-suffix-aware domain normalization groups subdomains into deterministic services. Classification produces user-scoped `AccountEvidence` records, and aggregation upserts one `Account` per user and service domain with explainable confidence inputs. Marketing-only evidence is retained as low-confidence context and cannot independently produce likely or confirmed ownership.
+
+The account read layer exposes only user-scoped REST resources. List queries are paginated and allow bounded search, confidence, dormancy, and sorting controls. Detail responses serialize minimized evidence without Gmail message IDs, connection IDs, subjects, or provider credentials. Dormancy is refreshed from the most recent ownership evidence using documented time bands; it remains an inference rather than a claim about the service's current account state.
+
+The identity graph is a read-time projection over the authenticated user, safe Google connection metadata, accounts, and evidence provenance. Deterministic typed nodes and edges avoid a separate graph database. The summary reports complete counts while the visual graph caps account nodes at 200; the paginated Accounts API remains the full inventory interface.
+
+Account cleanup is a separate account-owned recommendation layer. It generates idempotent user/account/type records from confidence, dormancy, and evidence classes, preserves user-managed lifecycle states, and removes open recommendations that no longer apply. Its REST contract is intentionally separate from Raphael-owned global inbox and request workflows.
+
 Privacy-sensitive integrations should store derived metadata instead of full source content wherever possible. Feature boundaries communicate through owned REST APIs rather than duplicated business logic.

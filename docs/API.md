@@ -95,7 +95,7 @@ Clears the session cookie and returns:
 }
 ```
 
-Gmail, accounts, subscriptions, breaches, and other product APIs remain outside this authentication milestone.
+Subscriptions, breaches, and other product APIs remain outside this authentication milestone.
 
 ## Onboarding
 
@@ -131,3 +131,217 @@ Request:
 The supported progression is `NOT_STARTED → PRIVACY_REVIEWED → GMAIL_PENDING`. Repeating the current step is idempotent. Unsupported states return `400 INVALID_ONBOARDING_STATUS`; skipping a required step returns `409 ONBOARDING_STEP_OUT_OF_ORDER`.
 
 `GMAIL_PENDING` means the user completed the privacy explanation and is ready to begin connection setup. It does not mean Gmail access has been granted.
+
+## Google connection
+
+All endpoints require a valid OwnTrace session. Provider tokens and the Google account ID are never returned.
+
+### Connection status
+
+`GET /api/google/connection`
+
+Returns whether Google is configured for the current environment and either `connection: null` or safe connection metadata including email, scopes, status, expiry timestamp, and sync timestamps.
+
+### Begin OAuth
+
+`GET /api/google/oauth/start`
+
+Sets a short-lived httpOnly OAuth-state cookie and redirects to Google. The requested scopes are `openid`, `email`, and `https://www.googleapis.com/auth/gmail.metadata`, with offline access for refresh support.
+
+### OAuth callback
+
+`GET /api/google/oauth/callback`
+
+Validates the session-bound state, exchanges the code on the server, verifies the Google ID token, encrypts provider tokens, and redirects to `/connect/gmail` with a safe result code. Raw provider errors and credentials are not placed in the URL.
+
+### Disconnect
+
+`DELETE /api/google/connection`
+
+Attempts Google token revocation, then deletes the authenticated user's connection, sync state, derived Gmail signals, Gmail-derived account evidence, actions for accounts that are removed, and accounts with no remaining evidence. A provider network failure returns `502 GOOGLE_REVOCATION_FAILED` without deleting local state so revocation can be retried.
+
+## Gmail metadata sync
+
+The sync is split into bounded requests. Every route is scoped to the authenticated user.
+
+- `GET /api/google/sync` — current safe job state or `null`.
+- `POST /api/google/sync` — create or restart a queued job (`202 Accepted`) when no batch is active.
+- `POST /api/google/sync/next` — process the next batch of up to 25 message IDs and selected metadata headers.
+- `DELETE /api/google/sync` — cancel an active job without deleting previously derived signals.
+
+Job states are `QUEUED`, `SCANNING`, `PROCESSING`, `COMPLETED`, `FAILED`, and `CANCELLED`. Progress includes processed/stored counts and an estimated mailbox total; provider page tokens remain server-only. Repeated scans upsert by a user-scoped HMAC message identifier and do not duplicate signals. Starting another scan or advancing a second batch while one is active returns `409 GMAIL_SYNC_IN_PROGRESS` so concurrent browser tabs cannot reset or double-count progress. A stale batch lock can be reclaimed after an interrupted worker.
+
+A completed bounded sync automatically runs deterministic account discovery. Account browsing endpoints are introduced in the separate accounts milestone.
+
+Safe error codes include `GOOGLE_NOT_CONNECTED`, `GOOGLE_RECONNECT_REQUIRED`, `GOOGLE_RATE_LIMITED`, `GOOGLE_REQUEST_FAILED`, `GMAIL_SYNC_NOT_STARTED`, `GMAIL_SYNC_IN_PROGRESS`, `PARTIAL_METADATA_RESULTS`, and `MESSAGE_LIMIT_REACHED`.
+
+## Accounts
+
+All account endpoints require a valid OwnTrace session and scope every query to the authenticated user. Responses never include provider credentials, raw email bodies, normalized subject signals, Gmail message identifiers, or Google connection identifiers.
+
+### List accounts
+
+`GET /api/accounts`
+
+Supported query parameters:
+
+- `page` (default `1`) and `limit` (default `24`, maximum `100`)
+- `search` for a service name or domain, maximum 80 characters
+- `confidence`: `UNKNOWN`, `POSSIBLE`, `LIKELY`, or `CONFIRMED`
+- `dormant`: `UNKNOWN`, `ACTIVE`, `POSSIBLY_DORMANT`, or `DORMANT`
+- `sort`: `lastSeen`, `firstSeen`, `serviceName`, or `confidence`
+- `direction`: `asc` or `desc`
+
+Response:
+
+```json
+{
+  "success": true,
+  "accounts": [
+    {
+      "id": "...",
+      "serviceName": "Canva",
+      "primaryDomain": "canva.com",
+      "confidenceScore": 93,
+      "confidenceLevel": "CONFIRMED",
+      "evidenceCount": 3,
+      "ownershipEvidenceCount": 2,
+      "dormantStatus": "ACTIVE",
+      "dormantReason": "Account-related evidence was detected within the last 12 months.",
+      "firstSeenAt": "...",
+      "lastSeenAt": "..."
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 24,
+    "total": 1,
+    "pages": 1
+  }
+}
+```
+
+Invalid query controls return `400 INVALID_ACCOUNT_QUERY`.
+
+### Account summary
+
+`GET /api/accounts/summary`
+
+This stable integration contract is intended for clients such as Raphael's dashboard:
+
+```json
+{
+  "success": true,
+  "summary": {
+    "total": 186,
+    "dormant": 47,
+    "possiblyDormant": 18,
+    "highConfidence": 120,
+    "recentlySeen": 32
+  }
+}
+```
+
+`highConfidence` counts scores of 70 or greater. `recentlySeen` counts accounts with any derived signal in the last 90 days. Dormancy uses ownership evidence only.
+
+### Account detail
+
+`GET /api/accounts/:id`
+
+Returns the safe account shape plus up to 100 of its most recent minimized evidence records, `evidenceTotal`, and `evidenceTruncated`. Evidence includes class, weight, ownership flag, reason code, source domain, and occurrence time. Cross-user, missing, and invalid identifiers return `404 ACCOUNT_NOT_FOUND` without revealing whether another user owns the identifier.
+
+## Identity graph
+
+`GET /api/identity`
+
+Requires a valid OwnTrace session. Returns a derived graph containing typed `nodes`, typed `edges`, `generatedAt`, and a `summary`:
+
+```json
+{
+  "success": true,
+  "graph": {
+    "nodes": [
+      {
+        "id": "profile",
+        "type": "PROFILE",
+        "label": "Example User",
+        "detail": "OwnTrace profile",
+        "status": "CONFIRMED"
+      }
+    ],
+    "edges": [
+      {
+        "id": "profile:AUTHENTICATES_AS:email:primary",
+        "source": "profile",
+        "target": "email:primary",
+        "type": "AUTHENTICATES_AS",
+        "label": "Authenticates as"
+      }
+    ],
+    "summary": {
+      "emailIdentityCount": 1,
+      "connectedIdentityCount": 1,
+      "accountCount": 186,
+      "serviceCount": 186,
+      "renderedAccountCount": 186,
+      "truncated": false
+    },
+    "generatedAt": "..."
+  }
+}
+```
+
+Node types are `PROFILE`, `EMAIL_IDENTITY`, `GOOGLE_IDENTITY`, `ACCOUNT`, and `SERVICE`. Edge types are `AUTHENTICATES_AS`, `CONNECTED_IDENTITY`, `DISCOVERED_ACCOUNT`, `HAS_ACCOUNT_EVIDENCE`, and `BELONGS_TO_SERVICE`.
+
+The summary reports full counts. Node rendering is capped at the 200 highest-confidence accounts; `truncated` indicates when the cap applies. Provider IDs, OAuth tokens, Gmail identifiers, connection identifiers, raw subjects, and raw evidence are never returned.
+
+## Account actions
+
+Account actions are account-owned cleanup recommendations, not Raphael's Privacy Inbox or privacy-request system. All endpoints require a valid OwnTrace session and scope reads/updates to the authenticated user.
+
+### List actions
+
+`GET /api/account-actions`
+
+Query parameters:
+
+- `status`: `OPEN` (default), `IN_PROGRESS`, `COMPLETED`, or `DISMISSED`
+- `accountId`: optional user-owned account filter
+- `page` (default `1`) and `limit` (default `24`, maximum `100`)
+
+Each action includes its type, title, description, explanation, priority, lifecycle status, timestamps, and safe account display metadata. Recommendation types are `REVIEW_ACCOUNT`, `SECURE_ACCOUNT`, `REVIEW_SIGN_IN`, and `CONSIDER_DELETION`. Responses do not include provider credentials, provider identifiers, raw evidence, Gmail identifiers, or subjects.
+
+Invalid filters return `400 INVALID_ACCOUNT_ACTION_QUERY`.
+
+### Action summary
+
+`GET /api/account-actions/summary`
+
+```json
+{
+  "success": true,
+  "summary": {
+    "open": 8,
+    "inProgress": 2,
+    "completed": 5,
+    "dismissed": 1,
+    "highPriority": 1
+  }
+}
+```
+
+`highPriority` counts high-priority actions that are open or in progress.
+
+### Update action status
+
+`PATCH /api/account-actions/:id`
+
+Request:
+
+```json
+{
+  "status": "COMPLETED"
+}
+```
+
+Supported transitions allow open work to start, complete, or dismiss; in-progress work to reopen, complete, or dismiss; and completed/dismissed work to reopen. Repeating the current status is idempotent. Invalid statuses return `400 INVALID_ACCOUNT_ACTION_STATUS`, unsupported transitions return `409 ACCOUNT_ACTION_TRANSITION_NOT_ALLOWED`, and invalid, missing, or cross-user IDs return `404 ACCOUNT_ACTION_NOT_FOUND`.
