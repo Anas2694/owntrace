@@ -61,7 +61,6 @@ function createAuthorizationUrl(userId) {
   const { cookieState, requestState } = createOAuthState(userId)
   const authorizationUrl = createOAuthClient().generateAuthUrl({
     access_type: 'offline',
-    include_granted_scopes: true,
     prompt: 'consent',
     scope: GOOGLE_SCOPES,
     state: requestState,
@@ -162,10 +161,7 @@ async function getConnectionForUser(userId, { includeSecrets = false } = {}) {
   return query
 }
 
-async function disconnectGoogle(userId) {
-  const connection = await getConnectionForUser(userId, { includeSecrets: true })
-  if (!connection) return false
-
+async function revokeConnectionToken(connection) {
   const token = decryptSecret(connection.encryptedRefreshToken || connection.encryptedAccessToken)
 
   if (token) {
@@ -182,6 +178,21 @@ async function disconnectGoogle(userId) {
       }
     }
   }
+}
+
+async function revokeGoogleAccessForUser(userId) {
+  const connection = await getConnectionForUser(userId, { includeSecrets: true })
+  if (!connection) return false
+
+  await revokeConnectionToken(connection)
+  return true
+}
+
+async function disconnectGoogle(userId) {
+  const connection = await getConnectionForUser(userId, { includeSecrets: true })
+  if (!connection) return false
+
+  await revokeConnectionToken(connection)
 
   await removeConnectionDiscoveries(userId, connection.id)
   await Promise.all([
@@ -201,6 +212,7 @@ export {
   createAuthorizationUrl,
   disconnectGoogle,
   getConnectionForUser,
+  revokeGoogleAccessForUser,
   stateValuesMatch,
   verifyOAuthState,
 }

@@ -12,6 +12,7 @@ import GmailConnectionPage from './features/google/GmailConnectionPage.jsx'
 import IdentityPage from './features/identity/IdentityPage.jsx'
 import LandingPage from './features/landing/LandingPage.jsx'
 import OnboardingPage from './features/onboarding/OnboardingPage.jsx'
+import AccountSettingsPage from './features/settings/AccountSettingsPage.jsx'
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
         path="/account-actions"
         element={<ProtectedRoute><AccountActionsPage /></ProtectedRoute>}
       />
+      <Route path="/settings" element={<ProtectedRoute><AccountSettingsPage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<DashboardPlaceholder />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

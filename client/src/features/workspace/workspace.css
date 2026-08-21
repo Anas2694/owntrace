@@ -92,9 +92,10 @@
     grid-column: 1 / -1;
     grid-row: 2;
     justify-content: stretch;
+    flex-wrap: wrap;
   }
 
   .workspace-header nav a {
-    flex: 1;
+    flex: 1 1 auto;
   }
 }

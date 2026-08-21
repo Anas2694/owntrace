@@ -1,5 +1,6 @@
 import {
   authenticateUser,
+  deleteUserAccount,
   getUserById,
   registerUser,
   serializeUser,
@@ -12,7 +13,11 @@ import {
   setSessionCookie,
   verifySessionToken,
 } from '../utils/session.js'
-import { validateLoginInput, validateRegistrationInput } from '../utils/validation.js'
+import {
+  validateAccountDeletionInput,
+  validateLoginInput,
+  validateRegistrationInput,
+} from '../utils/validation.js'
 
 function throwValidationError(errors) {
   if (Object.keys(errors).length) {
@@ -49,6 +54,19 @@ async function me(request, response) {
   response.status(200).json({ success: true, user: serializeUser(request.user) })
 }
 
+async function deleteAccount(request, response) {
+  const { data, errors } = validateAccountDeletionInput(request.body)
+  throwValidationError(errors)
+
+  const result = await deleteUserAccount(request.auth.userId, data.password)
+  clearSessionCookie(response)
+  response.status(200).json({
+    success: true,
+    deleted: true,
+    providerRevocation: result.providerRevocation,
+  })
+}
+
 async function session(request, response) {
   const token = request.cookies?.[SESSION_COOKIE_NAME]
 
@@ -78,4 +96,4 @@ async function session(request, response) {
   }
 }
 
-export { login, logout, me, register, session }
+export { deleteAccount, login, logout, me, register, session }

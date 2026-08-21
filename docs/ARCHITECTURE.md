@@ -14,6 +14,8 @@ Backend code is organized by routes, controllers, configuration, and—when mile
 
 Authentication uses a minimal MongoDB `User` record and a signed JWT stored only in an httpOnly browser cookie. The React `AuthProvider` discovers a restorable session through `GET /api/auth/session`, while protected APIs use authentication middleware and return `401` when unauthorized; Anas-owned routes never read a token from browser storage. Authentication routes follow the route → controller → service → model boundary so later Google association can extend the user without embedding provider credentials in the user record.
 
+Account settings provide a password-confirmed deletion boundary. Deletion attempts Google revocation, removes all Anas-owned records keyed to the authenticated user, clears the session, and explicitly reports when provider revocation could not be confirmed. Provider-side data and third-party accounts remain outside OwnTrace's deletion capability.
+
 Onboarding is a small, server-enforced progression on the user record: `NOT_STARTED → PRIVACY_REVIEWED → GMAIL_PENDING`. It explains data access and minimization before handing off to Gmail connection, without starting OAuth or creating a general workflow engine.
 
 Google OAuth remains server-side. Provider tokens are encrypted with AES-256-GCM, never serialized to the client, and associated through Google's verified stable OpenID `sub`. Gmail ingestion uses resumable 25-message API batches and stores only HMAC provider identifiers plus minimized header-derived signals. `GmailSyncJob` persists safe progress without an external queue; the browser can resume an interrupted queued job.
