@@ -9,6 +9,7 @@ import GoogleConnection from '../models/google-connection.model.js'
 import User from '../models/user.model.js'
 import AppError from '../utils/app-error.js'
 import { revokeGoogleAccessForUser } from './google-oauth.service.js'
+import { deleteRaphaelOwnedDataForUser } from './raphael-data.service.js'
 
 const DUMMY_PASSWORD_HASH = '$2b$12$OnbP9kWdyUNUxvOW.s950OcEToRQb8xqltZWIdmkSeXsYPip5BlS6'
 
@@ -86,6 +87,7 @@ async function deleteUserAccount(userId, password) {
     GmailSignal.deleteMany({ userId }),
     GmailSyncJob.deleteMany({ userId }),
     GoogleConnection.deleteMany({ userId }),
+    deleteRaphaelOwnedDataForUser(userId),
   ])
   await User.deleteOne({ _id: userId })
 

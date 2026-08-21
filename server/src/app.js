@@ -15,6 +15,7 @@ import googleRouter from './routes/google.routes.js'
 import healthRouter from './routes/health.routes.js'
 import identityRouter from './routes/identity.routes.js'
 import onboardingRouter from './routes/onboarding.routes.js'
+import privacyFeatureRouter from './routes/privacy-feature.routes.js'
 
 const app = express()
 
@@ -33,6 +34,7 @@ app.use('/api/onboarding', onboardingRouter)
 app.use('/api/accounts', accountRouter)
 app.use('/api/account-actions', accountActionRouter)
 app.use('/api/identity', identityRouter)
+app.use('/api', privacyFeatureRouter)
 
 app.use(notFoundHandler)
 app.use(errorHandler)

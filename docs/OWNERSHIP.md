@@ -32,4 +32,4 @@ Cross-feature changes should be agreed in pull requests before implementation.
 
 ## User-deletion contract
 
-`DELETE /api/auth/account` currently removes the authenticated user's profile and every Anas-owned record. When Raphael-owned persistent models are merged, their owner must add an explicit deletion hook or coordinated service contract before the product can describe deletion as covering those features. Feature code must not inspect or delete another owner's collections ad hoc.
+`DELETE /api/auth/account` removes the authenticated user's profile, every Anas-owned record, and Raphael-owned privacy-request records through the explicit `deleteRaphaelOwnedDataForUser` service contract. Other Raphael-owned views are derived and do not create persistent collections. Feature code must continue to use an owned deletion service rather than inspecting another owner's collections ad hoc.
