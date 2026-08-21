@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import AuthLayout from './AuthLayout.jsx'
 import { getRequestErrors } from './auth-errors.js'
 import useAuth from './useAuth.js'
@@ -9,6 +9,7 @@ function LoginPage() {
   const { login } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [values, setValues] = useState({ email: '', password: '' })
   const [fieldErrors, setFieldErrors] = useState({})
   const [formError, setFormError] = useState('')
@@ -50,6 +51,22 @@ function LoginPage() {
         <p>Sign in</p>
         <h2>Continue to OwnTrace</h2>
       </div>
+
+      {searchParams.get('account') === 'deleted' ? (
+        <div className="auth-account-deleted" role="status">
+          <strong>Your OwnTrace account and local workspace data were deleted.</strong>
+          {searchParams.get('providerRevocation') === 'failed' ? (
+            <span>
+              Google could not confirm revocation. Review OwnTrace access in your{' '}
+              <a href="https://myaccount.google.com/connections" target="_blank" rel="noreferrer">
+                Google Account<span className="auth-new-tab-copy"> (opens in a new tab)</span>
+              </a>.
+            </span>
+          ) : (
+            <span>Any connected Google access was revoked when available.</span>
+          )}
+        </div>
+      ) : null}
 
       {formError ? <p className="auth-form-error" role="alert">{formError}</p> : null}
 

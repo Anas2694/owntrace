@@ -229,6 +229,156 @@ describe('authentication API', () => {
     })
   })
 
+  describe('DELETE /api/auth/account', () => {
+    it('requires authentication and explicit confirmation', async () => {
+      await request(app)
+        .delete('/api/auth/account')
+        .send({ confirmation: 'DELETE', password: validRegistration.password })
+        .expect(401)
+
+      const agent = request.agent(app)
+      await agent.post('/api/auth/register').send(validRegistration).expect(201)
+      const response = await agent
+        .delete('/api/auth/account')
+        .send({ password: validRegistration.password })
+        .expect(400)
+
+      expect(response.body).toMatchObject({
+        code: 'VALIDATION_ERROR',
+        errors: { confirmation: 'Type DELETE to confirm permanent account deletion.' },
+      })
+      expect(await User.countDocuments({ email: validRegistration.email })).toBe(1)
+    })
+
+    it('requires the current password and deletes all user-owned data', async () => {
+      const agent = request.agent(app)
+      const registration = await agent.post('/api/auth/register').send(validRegistration).expect(201)
+      const userId = registration.body.user.id
+      const now = new Date()
+      const connection = await GoogleConnection.create({
+        email: validRegistration.email,
+        encryptedAccessToken: encryptSecret('delete-access-token'),
+        encryptedRefreshToken: encryptSecret('delete-refresh-token'),
+        googleAccountId: 'delete-google-account-id',
+        scopes: [GMAIL_METADATA_SCOPE],
+        tokenExpiresAt: new Date(Date.now() + 3_600_000),
+        userId,
+      })
+      const signal = await GmailSignal.create({
+        connectionId: connection.id,
+        messageIdHash: 'delete-message-hash',
+        occurredAt: now,
+        senderDomain: 'example.com',
+        senderEmail: 'account@example.com',
+        subjectSignal: 'verify your account',
+        threadIdHash: 'delete-thread-hash',
+        userId,
+      })
+      const account = await Account.create({
+        confidenceLevel: 'CONFIRMED',
+        confidenceScore: 90,
+        dormantReason: 'Recent account evidence exists.',
+        dormantStatus: 'ACTIVE',
+        evidenceClasses: ['ACCOUNT_VERIFICATION'],
+        evidenceCount: 1,
+        firstSeenAt: now,
+        lastEvaluatedAt: now,
+        lastOwnershipEvidenceAt: now,
+        lastSeenAt: now,
+        ownershipEvidenceCount: 1,
+        primaryDomain: 'example.com',
+        serviceKey: 'example.com',
+        serviceName: 'Example',
+        userId,
+      })
+      await Promise.all([
+        AccountEvidence.create({
+          accountId: account.id,
+          connectionId: connection.id,
+          evidenceClass: 'ACCOUNT_VERIFICATION',
+          evidenceWeight: 90,
+          gmailSignalId: signal.id,
+          occurredAt: now,
+          ownershipSignal: true,
+          reasonCode: 'ACCOUNT_VERIFICATION',
+          sourceDomain: 'example.com',
+          userId,
+        }),
+        AccountAction.create({
+          accountId: account.id,
+          description: 'Review the account directly.',
+          lastEvaluatedAt: now,
+          priority: 'LOW',
+          priorityRank: 1,
+          reason: 'Routine account review.',
+          title: 'Review this account',
+          type: 'REVIEW_ACCOUNT',
+          userId,
+        }),
+        GmailSyncJob.create({ connectionId: connection.id, status: 'COMPLETED', userId }),
+      ])
+
+      await agent
+        .delete('/api/auth/account')
+        .send({ confirmation: 'DELETE', password: 'incorrect account deletion password' })
+        .expect(401)
+      expect(await User.countDocuments({ _id: userId })).toBe(1)
+
+      const revokeToken = vi
+        .spyOn(google.auth.OAuth2.prototype, 'revokeToken')
+        .mockResolvedValue({ data: {} })
+      const response = await agent
+        .delete('/api/auth/account')
+        .send({ confirmation: 'DELETE', password: validRegistration.password })
+        .expect(200)
+
+      expect(response.body).toEqual({
+        success: true,
+        deleted: true,
+        providerRevocation: 'REVOKED',
+      })
+      expect(response.headers['set-cookie'][0]).toContain('owntrace_session=;')
+      expect(revokeToken).toHaveBeenCalledWith('delete-refresh-token')
+      expect(await Promise.all([
+        User.countDocuments({ _id: userId }),
+        GoogleConnection.countDocuments({ userId }),
+        GmailSyncJob.countDocuments({ userId }),
+        GmailSignal.countDocuments({ userId }),
+        Account.countDocuments({ userId }),
+        AccountEvidence.countDocuments({ userId }),
+        AccountAction.countDocuments({ userId }),
+      ])).toEqual([0, 0, 0, 0, 0, 0, 0])
+      await agent.get('/api/auth/me').expect(401)
+    })
+
+    it('still removes local data when Google revocation cannot be confirmed', async () => {
+      const agent = request.agent(app)
+      const registration = await agent.post('/api/auth/register').send(validRegistration).expect(201)
+      const userId = registration.body.user.id
+      await GoogleConnection.create({
+        email: validRegistration.email,
+        encryptedAccessToken: encryptSecret('failed-delete-access-token'),
+        encryptedRefreshToken: encryptSecret('failed-delete-refresh-token'),
+        googleAccountId: 'failed-delete-google-account-id',
+        scopes: [GMAIL_METADATA_SCOPE],
+        tokenExpiresAt: new Date(Date.now() + 3_600_000),
+        userId,
+      })
+      vi.spyOn(google.auth.OAuth2.prototype, 'revokeToken').mockRejectedValue({
+        response: { status: 503 },
+      })
+
+      const response = await agent
+        .delete('/api/auth/account')
+        .send({ confirmation: 'DELETE', password: validRegistration.password })
+        .expect(200)
+
+      expect(response.body.providerRevocation).toBe('FAILED')
+      expect(await User.countDocuments({ _id: userId })).toBe(0)
+      expect(await GoogleConnection.countDocuments({ userId })).toBe(0)
+    })
+  })
+
   describe('onboarding API', () => {
     it('requires an authenticated user', async () => {
       await request(app).get('/api/onboarding').expect(401)
@@ -320,7 +470,10 @@ describe('authentication API', () => {
       expect(authorizationUrl.origin).toBe('https://accounts.google.com')
       expect(authorizationUrl.searchParams.get('access_type')).toBe('offline')
       expect(authorizationUrl.searchParams.get('prompt')).toBe('consent')
-      expect(authorizationUrl.searchParams.get('scope')).toContain(GMAIL_METADATA_SCOPE)
+      expect(authorizationUrl.searchParams.has('include_granted_scopes')).toBe(false)
+      expect(authorizationUrl.searchParams.get('scope').split(' ').sort()).toEqual(
+        ['openid', 'email', GMAIL_METADATA_SCOPE].sort(),
+      )
       expect(authorizationUrl.searchParams.get('state')).not.toContain('.')
       expect(response.headers['set-cookie'].join(';')).toContain('owntrace_google_oauth=')
       expect(response.headers['set-cookie'].join(';')).toContain('HttpOnly')

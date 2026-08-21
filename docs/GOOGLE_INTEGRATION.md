@@ -8,6 +8,8 @@ OwnTrace uses Google's server-side OAuth flow and requests only:
 - `email`
 - `https://www.googleapis.com/auth/gmail.metadata`
 
+The authorization request does not enable automatic inclusion of previously granted scopes. OwnTrace uses only the explicitly requested metadata capability.
+
 The Gmail metadata scope permits message headers and labels but not message bodies. It is nevertheless classified by Google as a restricted scope. A production public application must satisfy Google's OAuth verification requirements and, when restricted-scope data is stored or transmitted by a server, the applicable security assessment.
 
 Official references:
@@ -23,7 +25,7 @@ Official references:
 
 `gmail.metadata` does not permit the `q` search parameter on `messages.list`. OwnTrace therefore cannot ask Gmail to pre-filter account-related messages using Gmail search. The initial implementation paginates safely through message IDs, retrieves selected metadata headers in 25-message batches, and enforces `GMAIL_SYNC_MESSAGE_LIMIT` (default 2,000; maximum configurable value 20,000).
 
-The API does not prove that every discovered service represents an owned account. Later deterministic discovery treats metadata as evidence with explainable strength; marketing email alone will remain weak evidence.
+The API does not prove that every discovered service represents an owned account. Deterministic discovery treats metadata as evidence with explainable strength; marketing email alone remains weak evidence.
 
 OwnTrace reports Google integration capabilities in three explicit groups:
 

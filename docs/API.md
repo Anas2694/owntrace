@@ -95,6 +95,21 @@ Clears the session cookie and returns:
 }
 ```
 
+### Delete OwnTrace account
+
+`DELETE /api/auth/account`
+
+Requires a valid session, the user's current password, and an exact `DELETE` confirmation:
+
+```json
+{
+  "confirmation": "DELETE",
+  "password": "current password"
+}
+```
+
+OwnTrace attempts to revoke its Google access, clears the session cookie, and permanently removes the authenticated user's profile, Google connection, sync state, minimized Gmail signals, account evidence, accounts, and account actions. The response reports `providerRevocation` as `REVOKED`, `NOT_CONNECTED`, or `FAILED`. A `FAILED` result means local OwnTrace data was still deleted but Google could not confirm provider-side revocation, so the user should review access in Google Account settings. Incorrect password confirmation returns `401 ACCOUNT_DELETION_CONFIRMATION_FAILED`; invalid input returns `400 VALIDATION_ERROR`.
+
 Subscriptions, breaches, and other product APIs remain outside this authentication milestone.
 
 ## Onboarding
@@ -146,7 +161,7 @@ Returns whether Google is configured for the current environment and either `con
 
 `GET /api/google/oauth/start`
 
-Sets a short-lived httpOnly OAuth-state cookie and redirects to Google. The requested scopes are `openid`, `email`, and `https://www.googleapis.com/auth/gmail.metadata`, with offline access for refresh support.
+Sets a short-lived httpOnly OAuth-state cookie and redirects to Google. The request contains exactly `openid`, `email`, and `https://www.googleapis.com/auth/gmail.metadata`, with offline access for refresh support. OwnTrace does not enable automatic inclusion of scopes granted to other clients or earlier requests.
 
 ### OAuth callback
 
