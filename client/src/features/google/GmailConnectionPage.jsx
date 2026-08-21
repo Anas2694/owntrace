@@ -31,13 +31,33 @@ function GoogleMark() {
   )
 }
 
+function CapabilityList({ items }) {
+  return (
+    <ul>
+      {items.map((item) => (
+        <li key={item.id}>
+          <span className={`google-capability-state ${item.active ? 'is-active' : ''}`}>
+            {item.active ? 'Available now' : 'Not available'}
+          </span>
+          <strong>{item.label}</strong>
+          <p>{item.summary}</p>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function GmailConnectionPage() {
   const { restoreSession } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const titleRef = useRef(null)
   const stopSyncRef = useRef(false)
   const [callbackStatus] = useState(() => searchParams.get('google'))
-  const [googleState, setGoogleState] = useState({ available: false, connection: null })
+  const [googleState, setGoogleState] = useState({
+    available: false,
+    capabilities: { confirmed: [], inferred: [], unsupported: [] },
+    connection: null,
+  })
   const [sync, setSync] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
@@ -259,6 +279,43 @@ function GmailConnectionPage() {
             </div>
           </section>
         ) : null}
+
+        <section className="google-capabilities" aria-labelledby="capabilities-title">
+          <div className="google-capabilities-heading">
+            <p className="google-eyebrow">Provider capability map</p>
+            <h2 id="capabilities-title">What OwnTrace knows—and what it does not.</h2>
+            <p>
+              Connection facts come from Google OAuth. Account relationships remain OwnTrace
+              inferences. Provider-wide app permissions stay with Google.
+            </p>
+          </div>
+          <div className="google-capability-grid">
+            <article>
+              <span className="google-capability-label is-confirmed">Confirmed</span>
+              <h3>Provider facts</h3>
+              <CapabilityList items={googleState.capabilities.confirmed} />
+            </article>
+            <article>
+              <span className="google-capability-label is-inferred">Inferred</span>
+              <h3>Evidence-based relationships</h3>
+              <CapabilityList items={googleState.capabilities.inferred} />
+            </article>
+            <article>
+              <span className="google-capability-label is-unsupported">Unsupported</span>
+              <h3>Google-wide app access</h3>
+              <CapabilityList items={googleState.capabilities.unsupported} />
+              <a
+                className="google-account-link"
+                href="https://myaccount.google.com/connections"
+                aria-label="Review connections in Google Account (opens in a new tab)"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Review connections in Google Account
+              </a>
+            </article>
+          </div>
+        </section>
 
         <section className="google-boundaries" aria-labelledby="boundaries-title">
           <div><p className="google-eyebrow">Before you connect</p><h2 id="boundaries-title">What this permission means</h2></div>
