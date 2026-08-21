@@ -6,7 +6,7 @@ OwnTrace is a personal digital identity and privacy control platform. It is inte
 
 ## Status
 
-Early development. The responsive public landing page and Anas-owned website scope are implemented: authentication, privacy-first onboarding, secure Gmail connection and metadata sync, deterministic account discovery, protected account inventory, dormancy inference, the first identity graph, account cleanup recommendations, honest Google capability mapping, and password-confirmed OwnTrace data deletion. The security review is documented, but production launch requirements remain.
+Early development. The current website MVP includes the responsive public landing page, authentication, privacy-first onboarding, secure Gmail metadata sync, deterministic account discovery, protected account inventory, identity graph, account cleanup, dashboard, derived subscription/security/exposure views, explainable Privacy Health, Privacy Inbox, manual privacy-request tracking, notifications, honest Google capability mapping, and password-confirmed OwnTrace data deletion. Verified breach-provider lookup and automatic third-party privacy-request delivery are not yet integrated. The security review is documented, but production launch requirements remain.
 
 ## Tech stack
 

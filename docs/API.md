@@ -190,6 +190,48 @@ A completed bounded sync automatically runs deterministic account discovery. Acc
 
 Safe error codes include `GOOGLE_NOT_CONNECTED`, `GOOGLE_RECONNECT_REQUIRED`, `GOOGLE_RATE_LIMITED`, `GOOGLE_REQUEST_FAILED`, `GMAIL_SYNC_NOT_STARTED`, `GMAIL_SYNC_IN_PROGRESS`, `PARTIAL_METADATA_RESULTS`, and `MESSAGE_LIMIT_REACHED`.
 
+## Raphael-owned website APIs
+
+Every endpoint below requires the authenticated `owntrace_session` cookie. List endpoints accept positive `page` and `limit` values; limits are capped at 100, except notifications which are capped at 50. Unsupported query controls return `400`.
+
+### Subscription signals
+
+`GET /api/subscriptions`
+
+Returns a paginated view of discovered accounts whose minimized evidence contains `SUBSCRIPTION` or `PAYMENT` classes. Items identify the evidence basis and explicitly return unknown price and renewal date values. A signal does not confirm an active charge.
+
+### Breach status and security signals
+
+`GET /api/breaches`
+
+Returns an empty `breaches` array until a verified breach-data provider exists, together with provider status and a paginated `securitySignals` review list derived from `SECURITY_ALERT` or `PASSWORD_RESET` metadata. Every signal has `verifiedBreach: false`.
+
+### Exposure review
+
+`GET /api/exposures`
+
+Returns a paginated review projection over discovered account evidence. Levels prioritize security-alert and dormant signals. Every item has `verifiedPublicExposure: false`; this endpoint does not claim public data exposure.
+
+### Privacy Health
+
+`GET /api/privacy-health`
+
+Returns `score: null` until account evidence exists. Otherwise it subtracts bounded penalties for dormant/possibly dormant accounts, lower-confidence accounts, and high-priority open actions from a 100-point baseline. The response includes every factor and identifies the result as a deterministic estimate rather than an audit.
+
+### Privacy requests
+
+- `GET /api/privacy-requests` — paginated records, with optional `status` filter.
+- `POST /api/privacy-requests` — create a draft from `serviceName`, `requestType`, and optional `notes`.
+- `PATCH /api/privacy-requests/:id` — apply a supported lifecycle transition.
+
+Types are `ACCESS`, `DELETE`, `CORRECT`, and `OPT_OUT`. Statuses are `DRAFT`, `READY`, `SENT`, `COMPLETED`, and `CANCELLED`. `SENT` records a manual user action; OwnTrace does not deliver the request to a third party. Invalid and cross-user IDs return the same safe `404` response.
+
+### Notifications
+
+`GET /api/notifications`
+
+Returns a bounded, read-only projection over open account actions and privacy requests in `READY` or `SENT` state. Notifications are not a separate persistent collection.
+
 ## Accounts
 
 All account endpoints require a valid OwnTrace session and scope every query to the authenticated user. Responses never include provider credentials, raw email bodies, normalized subject signals, Gmail message identifiers, or Google connection identifiers.

@@ -25,9 +25,11 @@ function WorkspaceHeader() {
     <header className="workspace-header">
       <Link className="workspace-brand" to="/">OwnTrace</Link>
       <nav aria-label="OwnTrace workspace">
+        <NavLink to="/dashboard">Dashboard</NavLink>
         <NavLink to="/accounts">Accounts</NavLink>
         <NavLink to="/identity">Identity</NavLink>
         <NavLink to="/account-actions">Actions</NavLink>
+        <NavLink to="/privacy-inbox">Privacy Inbox</NavLink>
         <NavLink to="/connect/gmail">Gmail</NavLink>
         <NavLink to="/settings">Settings</NavLink>
       </nav>

@@ -7,11 +7,18 @@ import LoginPage from './features/auth/LoginPage.jsx'
 import ProtectedRoute from './features/auth/ProtectedRoute.jsx'
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute.jsx'
 import RegisterPage from './features/auth/RegisterPage.jsx'
-import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx'
 import GmailConnectionPage from './features/google/GmailConnectionPage.jsx'
 import IdentityPage from './features/identity/IdentityPage.jsx'
 import LandingPage from './features/landing/LandingPage.jsx'
 import OnboardingPage from './features/onboarding/OnboardingPage.jsx'
+import BreachesPage from './features/privacy/BreachesPage.jsx'
+import DashboardPage from './features/privacy/DashboardPage.jsx'
+import ExposuresPage from './features/privacy/ExposuresPage.jsx'
+import NotificationsPage from './features/privacy/NotificationsPage.jsx'
+import PrivacyHealthPage from './features/privacy/PrivacyHealthPage.jsx'
+import PrivacyInboxPage from './features/privacy/PrivacyInboxPage.jsx'
+import PrivacyRequestsPage from './features/privacy/PrivacyRequestsPage.jsx'
+import SubscriptionsPage from './features/privacy/SubscriptionsPage.jsx'
 import AccountSettingsPage from './features/settings/AccountSettingsPage.jsx'
 
 function App() {
@@ -39,7 +46,14 @@ function App() {
         element={<ProtectedRoute><AccountActionsPage /></ProtectedRoute>}
       />
       <Route path="/settings" element={<ProtectedRoute><AccountSettingsPage /></ProtectedRoute>} />
-      <Route path="/dashboard" element={<DashboardPlaceholder />} />
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/subscriptions" element={<ProtectedRoute><SubscriptionsPage /></ProtectedRoute>} />
+      <Route path="/breaches" element={<ProtectedRoute><BreachesPage /></ProtectedRoute>} />
+      <Route path="/exposures" element={<ProtectedRoute><ExposuresPage /></ProtectedRoute>} />
+      <Route path="/privacy-health" element={<ProtectedRoute><PrivacyHealthPage /></ProtectedRoute>} />
+      <Route path="/privacy-inbox" element={<ProtectedRoute><PrivacyInboxPage /></ProtectedRoute>} />
+      <Route path="/privacy-requests" element={<ProtectedRoute><PrivacyRequestsPage /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

@@ -37,3 +37,7 @@ These controls reduce common risks but are not a claim that the application is d
 - Marketing-only and unclassified messages cannot independently produce likely or confirmed account ownership.
 - Disconnect first attempts provider revocation, then removes the local connection, sync job, derived Gmail signals, Gmail-derived evidence, actions for deleted accounts, and accounts with no remaining evidence. Network revocation failures retain local data so the user can safely retry.
 - Permanent OwnTrace account deletion requires the authenticated user's current password and an exact text confirmation. It attempts provider revocation, removes every Anas-owned user record, and reports when Google revocation could not be confirmed without retaining the local data the user asked to delete.
+- Dashboard, subscription, breach-status, exposure, Privacy Health, Privacy Inbox, privacy-request, and notification routes require authentication. Queries are bounded and every persistent lookup includes the authenticated user ID.
+- Subscription and exposure views return derived account evidence only. Security-alert and password-reset metadata is never called a verified breach; verified breach results remain empty until a dedicated provider is integrated.
+- Privacy Health is a deterministic estimate over minimized account and action summaries, not a claim of external security verification.
+- Privacy requests are manual tracking records and are not transmitted to third parties. Account deletion removes them through the Raphael-owned deletion hook.
