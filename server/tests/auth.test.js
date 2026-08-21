@@ -294,7 +294,19 @@ describe('authentication API', () => {
 
       const response = await agent.get('/api/google/connection').expect(200)
 
-      expect(response.body.google).toEqual({ available: true, connection: null })
+      expect(response.body.google).toMatchObject({
+        available: true,
+        capabilities: {
+          confirmed: [
+            { active: false, id: 'verified-google-identity' },
+            { active: false, id: 'oauth-connection-state' },
+            { active: false, id: 'gmail-metadata-access' },
+          ],
+          inferred: [{ active: false, id: 'account-relationships' }],
+          unsupported: [{ active: false, id: 'google-connected-apps-inventory' }],
+        },
+        connection: null,
+      })
       await request(app).get('/api/google/connection').expect(401)
     })
 
@@ -377,6 +389,15 @@ describe('authentication API', () => {
       expect(status.body.google.connection).toMatchObject({
         email: 'google-user@example.com',
         status: 'CONNECTED',
+      })
+      expect(status.body.google.capabilities).toMatchObject({
+        confirmed: [
+          { active: true, id: 'verified-google-identity' },
+          { active: true, id: 'oauth-connection-state' },
+          { active: true, id: 'gmail-metadata-access' },
+        ],
+        inferred: [{ active: true, id: 'account-relationships' }],
+        unsupported: [{ active: false, id: 'google-connected-apps-inventory' }],
       })
 
       await agent.delete('/api/google/connection').expect(200)

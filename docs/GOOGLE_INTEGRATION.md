@@ -25,6 +25,14 @@ Official references:
 
 The API does not prove that every discovered service represents an owned account. Later deterministic discovery treats metadata as evidence with explainable strength; marketing email alone will remain weak evidence.
 
+OwnTrace reports Google integration capabilities in three explicit groups:
+
+- **Confirmed** — verified OAuth identity, stored connection state, and scopes Google actually granted
+- **Inferred** — account relationships derived by OwnTrace from minimized Gmail metadata evidence
+- **Unsupported** — provider-wide capabilities OwnTrace cannot accurately provide
+
+OwnTrace does not have supported API access to enumerate or revoke every third-party application grant in a user's Google Account. It does not scrape private Google Account pages or imply that Gmail-derived account relationships are Google's connected-app inventory. Users can review provider-managed connections directly at [Google Account connections](https://myaccount.google.com/connections).
+
 ## Data minimization
 
 The sync does not request or store bodies, snippets, raw MIME, or attachments. Stored signals contain:

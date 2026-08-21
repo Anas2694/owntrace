@@ -140,7 +140,7 @@ All endpoints require a valid OwnTrace session. Provider tokens and the Google a
 
 `GET /api/google/connection`
 
-Returns whether Google is configured for the current environment and either `connection: null` or safe connection metadata including email, scopes, status, expiry timestamp, and sync timestamps.
+Returns whether Google is configured for the current environment and either `connection: null` or safe connection metadata including email, scopes, status, expiry timestamp, and sync timestamps. The response also includes a `capabilities` contract grouped as `confirmed`, `inferred`, and `unsupported`. Each item has a stable ID, current `active` flag, label, and plain-language summary. It never exposes provider IDs or credentials.
 
 ### Begin OAuth
 

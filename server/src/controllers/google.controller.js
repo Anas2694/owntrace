@@ -11,6 +11,7 @@ import {
   disconnectGoogle,
   getConnectionForUser,
 } from '../services/google-oauth.service.js'
+import { buildGoogleCapabilities } from '../services/google-capability.service.js'
 import {
   cancelSync,
   getSyncJob,
@@ -38,6 +39,7 @@ async function getConnection(request, response) {
     success: true,
     google: {
       available: isGoogleConfigured(),
+      capabilities: buildGoogleCapabilities(connection),
       connection: connection ? connection.toJSON() : null,
     },
   })
