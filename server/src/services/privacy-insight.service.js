@@ -1,12 +1,12 @@
 import Account from '../models/account.model.js'
 import BreachReport from '../models/breach-report.model.js'
+import Subscription from '../models/subscription.model.js'
 import { getAccountActionSummary } from './account-action.service.js'
 import { getAccountSummary } from './account.service.js'
 import { getBreachReportForUser, serializeBreachReport } from './breach-report.service.js'
 import AppError from '../utils/app-error.js'
 import { paginationFor, parseBoundedPagination } from '../utils/pagination.js'
 
-const subscriptionClasses = ['SUBSCRIPTION', 'PAYMENT']
 const securityClasses = ['SECURITY_ALERT', 'PASSWORD_RESET']
 
 function safeAccountProjection(account) {
@@ -68,20 +68,18 @@ function parseBreachPagination(rawQuery = {}) {
 }
 
 async function listSubscriptions(userId, rawQuery = {}) {
-  const { accounts, pagination } = await findAccountSignals(
-    userId,
-    rawQuery,
-    subscriptionClasses,
-  )
+  const { limit, page } = parseBoundedPagination(rawQuery)
+  const filter = { userId }
+  const [subscriptions, total] = await Promise.all([
+    Subscription.find(filter)
+      .sort({ lastSeenAt: -1, _id: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+    Subscription.countDocuments(filter),
+  ])
   return {
-    pagination,
-    subscriptions: accounts.map((account) => ({
-      ...safeAccountProjection(account),
-      basis: account.evidenceClasses.filter((value) => subscriptionClasses.includes(value)),
-      detection: 'GMAIL_METADATA_SIGNAL',
-      price: null,
-      renewalDate: null,
-    })),
+    pagination: paginationFor({ limit, page, total }),
+    subscriptions: subscriptions.map((subscription) => subscription.toJSON()),
   }
 }
 

@@ -13,6 +13,7 @@ import Account from '../src/models/account.model.js'
 import GoogleConnection from '../src/models/google-connection.model.js'
 import GmailSignal from '../src/models/gmail-signal.model.js'
 import GmailSyncJob from '../src/models/gmail-sync-job.model.js'
+import Subscription from '../src/models/subscription.model.js'
 import User from '../src/models/user.model.js'
 import { decryptSecret, encryptSecret } from '../src/utils/encryption.js'
 
@@ -31,6 +32,7 @@ beforeAll(async () => {
     GoogleConnection.init(),
     GmailSignal.init(),
     GmailSyncJob.init(),
+    Subscription.init(),
   ])
 })
 
@@ -316,6 +318,19 @@ describe('authentication API', () => {
           userId,
         }),
         GmailSyncJob.create({ connectionId: connection.id, status: 'COMPLETED', userId }),
+        Subscription.create({
+          basis: ['SUBSCRIPTION'],
+          billingCycle: 'MONTHLY',
+          confidenceLevel: 'POSSIBLE',
+          confidenceScore: 50,
+          evidenceCount: 1,
+          firstSeenAt: now,
+          lastSeenAt: now,
+          primaryDomain: 'example.com',
+          serviceKey: 'example.com',
+          serviceName: 'Example',
+          userId,
+        }),
       ])
 
       await agent
@@ -347,7 +362,8 @@ describe('authentication API', () => {
         Account.countDocuments({ userId }),
         AccountEvidence.countDocuments({ userId }),
         AccountAction.countDocuments({ userId }),
-      ])).toEqual([0, 0, 0, 0, 0, 0, 0])
+        Subscription.countDocuments({ userId }),
+      ])).toEqual([0, 0, 0, 0, 0, 0, 0, 0])
       await agent.get('/api/auth/me').expect(401)
     })
 
@@ -553,9 +569,24 @@ describe('authentication API', () => {
         unsupported: [{ active: false, id: 'google-connected-apps-inventory' }],
       })
 
+      await Subscription.create({
+        basis: ['PAYMENT'],
+        billingCycle: 'MONTHLY',
+        confidenceLevel: 'POSSIBLE',
+        confidenceScore: 55,
+        evidenceCount: 1,
+        firstSeenAt: new Date(),
+        lastSeenAt: new Date(),
+        primaryDomain: 'disconnect.example',
+        serviceKey: 'disconnect.example',
+        serviceName: 'Disconnect Example',
+        userId: storedConnection.userId,
+      })
+
       await agent.delete('/api/google/connection').expect(200)
       expect(revokeToken).toHaveBeenCalledWith('google-refresh-token')
       expect(await GoogleConnection.countDocuments()).toBe(0)
+      expect(await Subscription.countDocuments()).toBe(0)
       expect((await User.findOne({ email: validRegistration.email })).authProviders).toEqual([
         'password',
       ])

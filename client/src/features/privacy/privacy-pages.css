@@ -124,6 +124,17 @@
 .privacy-list-item p { margin: 0.35rem 0 0; color: var(--color-text-muted); font-size: 0.8rem; line-height: 1.55; }
 .privacy-list-item small { color: var(--color-text-soft); font-size: 0.68rem; }
 
+.privacy-subscription-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0.9rem 0 0;
+}
+
+.privacy-subscription-facts div { min-width: 0; }
+.privacy-subscription-facts dt { color: var(--color-text-soft); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; }
+.privacy-subscription-facts dd { margin: 0.2rem 0 0; color: #effff3; font-size: 0.74rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
 .privacy-status {
   display: inline-flex;
   width: fit-content;
@@ -282,6 +293,7 @@
   .privacy-page-intro h1 { font-size: clamp(2rem, 12vw, 3.3rem); }
   .privacy-metric-grid { grid-template-columns: 1fr; }
   .privacy-list-item { grid-template-columns: 1fr; }
+  .privacy-subscription-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .privacy-actions { justify-content: flex-start; }
   .privacy-form { grid-template-columns: 1fr; }
   .privacy-form label.is-full { grid-column: auto; }

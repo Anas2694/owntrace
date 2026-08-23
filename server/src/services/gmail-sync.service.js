@@ -6,6 +6,10 @@ import GmailSyncJob from '../models/gmail-sync-job.model.js'
 import GoogleConnection from '../models/google-connection.model.js'
 import AppError from '../utils/app-error.js'
 import { discoverAccountsForUser } from './account-discovery.service.js'
+import {
+  extractBillingMetadata,
+  syncSubscriptionsForUser,
+} from './subscription-detection.service.js'
 import { withGoogleClient } from './google-client.service.js'
 
 const BATCH_SIZE = 25
@@ -58,6 +62,8 @@ function getHeader(message, name) {
 
 function deriveSignal(userId, connectionId, message) {
   const { senderDomain, senderEmail } = parseSender(getHeader(message, 'From'))
+  const subject = getHeader(message, 'Subject')
+  const billingMetadata = extractBillingMetadata(subject)
   const headerDate = Date.parse(getHeader(message, 'Date'))
   const internalDate = Number(message.internalDate)
   const occurredAt = Number.isFinite(internalDate) && internalDate > 0
@@ -67,12 +73,15 @@ function deriveSignal(userId, connectionId, message) {
   if (!message.id || !message.threadId || Number.isNaN(occurredAt.getTime())) return null
 
   return {
+    billingAmountMinor: billingMetadata.amountMinor,
+    billingCurrency: billingMetadata.currency,
+    billingCycle: billingMetadata.billingCycle,
     connectionId,
     messageIdHash: hashProviderId(userId, message.id),
     occurredAt,
     senderDomain,
     senderEmail,
-    subjectSignal: deriveSubjectSignal(getHeader(message, 'Subject')),
+    subjectSignal: deriveSubjectSignal(subject),
     threadIdHash: hashProviderId(userId, message.threadId),
     userId,
   }
@@ -256,7 +265,23 @@ async function processNextBatch(userId) {
                 messageIdHash: signal.messageIdHash,
                 userId,
               },
-              update: { $setOnInsert: signal },
+              update: {
+                $set: {
+                  billingAmountMinor: signal.billingAmountMinor,
+                  billingCurrency: signal.billingCurrency,
+                  billingCycle: signal.billingCycle,
+                  occurredAt: signal.occurredAt,
+                  senderDomain: signal.senderDomain,
+                  senderEmail: signal.senderEmail,
+                  subjectSignal: signal.subjectSignal,
+                },
+                $setOnInsert: {
+                  connectionId: signal.connectionId,
+                  messageIdHash: signal.messageIdHash,
+                  threadIdHash: signal.threadIdHash,
+                  userId,
+                },
+              },
               upsert: true,
             },
           })),
@@ -301,7 +326,10 @@ async function processNextBatch(userId) {
       return updatedJob
     })
 
-    if (updatedJob?.status === 'COMPLETED') await discoverAccountsForUser(userId)
+    if (updatedJob?.status === 'COMPLETED') {
+      await discoverAccountsForUser(userId)
+      await syncSubscriptionsForUser(userId)
+    }
     return updatedJob
   } catch (error) {
     await GmailSyncJob.updateOne(
