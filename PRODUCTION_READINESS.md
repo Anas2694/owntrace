@@ -18,7 +18,7 @@ OwnTrace is a low-volume, single-instance MERN web beta serving a React client a
 
 | ID | Category | Status | Evidence / required follow-up | Owner |
 | --- | --- | --- | --- | --- |
-| PR-001 | Build | Clean-checkout pass; CI pending | Fresh lockfile installs, lint, production build, syntax, 105 tests, browser matrix, and production smoke passed. The PR Docker image build remains required. | Engineering |
+| PR-001 | Build | Passed | Fresh lockfile installs, lint, production build, syntax, 105 tests, browser matrix, production smoke, dependency audits, and the PR Docker image build passed. | Engineering |
 | PR-002 | Configuration | Implemented, unverified in hosting | Startup validation and `docs/ENVIRONMENT.md` exist; production values and rotation ownership must be configured in a secret store. | Deployment/security |
 | PR-003 | Security | Code gate passed | Root `SECURITY_REVIEW.md` records no open Critical/High finding and one remediated Medium session-replay finding. | Engineering/security |
 | PR-004 | Health/shutdown | Local pass; hosting pending | Liveness, MongoDB readiness, request IDs, bounded timeouts, redacted logs, and graceful shutdown passed the production-process smoke; verify signals in the selected platform. | Engineering/hosting |

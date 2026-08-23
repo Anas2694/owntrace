@@ -69,6 +69,6 @@ Excluded from active testing: production systems, real user data, destructive pr
 - Browser: public/legal/auth pages at 390, 768, and 1440 px; every protected route at 390 px; critical protected routes at 768 and 1440 px; no horizontal overflow, alert state, React warning, console warning, or console error.
 - Keyboard/accessibility: visible legal-page focus, semantic landmarks/headings, reduced-motion override, mobile-drawer initial focus, focus containment, Escape close, trigger restoration, body-scroll restoration, and hidden/inert closed state passed.
 - `git diff --check` and the intended tracked-file credential-pattern scan passed. No real `.env` file was added.
-- Local Docker image build was unavailable because the Docker Desktop engine was not running. The pull-request CI image-build job is required before merge.
+- Local Docker image build was unavailable because the Docker Desktop engine was not running; the equivalent pull-request CI image build passed on GitHub's Linux runner.
 
 No secret values, environment files, provider tokens, real user data, or email content are included in this document.
