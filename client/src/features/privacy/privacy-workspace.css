@@ -153,10 +153,11 @@
   .privacy-sidebar {
     width: min(19rem, calc(100vw - 3rem));
     transform: translateX(-105%);
-    transition: transform 180ms ease;
+    visibility: hidden;
+    transition: transform 180ms ease, visibility 0s linear 180ms;
   }
 
-  .privacy-sidebar.is-open { transform: translateX(0); }
+  .privacy-sidebar.is-open { transform: translateX(0); visibility: visible; transition-delay: 0s; }
   .privacy-sidebar-close { display: grid; width: 2.75rem; height: 2.75rem; place-items: center; font-size: 1.5rem; }
 
   .privacy-navigation-backdrop {

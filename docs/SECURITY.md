@@ -13,13 +13,15 @@ OwnTrace may eventually process sensitive identity, email metadata, OAuth tokens
 ## Authentication controls
 
 - Passwords are hashed with bcrypt and the stored `passwordHash` is excluded from normal queries and API serialization.
-- Session JWTs use an explicit issuer, audience, algorithm allowlist, seven-day expiry, and an httpOnly cookie.
+- Session JWTs use an explicit issuer, audience, algorithm allowlist, seven-day expiry, and an httpOnly cookie. A hash of each random JWT ID is stored in a bounded server-side `Session` record so logout revokes replay and account deletion removes every session.
 - Development cookies use `SameSite=Lax`; production additionally requires `Secure` cookies through `NODE_ENV=production`.
 - Unsafe browser requests require an `Origin` listed in `CLIENT_ORIGINS`, in addition to the CORS allowlist.
 - Helmet, JSON body limits, general API rate limiting, and tighter registration/login rate limiting are enabled.
 - Authentication failures avoid exposing whether an email exists, and unexpected errors do not return internal details.
 
 These controls reduce common risks but are not a claim that the application is deployment-ready. Production infrastructure, provider verification, monitoring, backups, and operational response remain separate launch work.
+
+Current release-delivery evidence and findings are maintained in the root `SECURITY_REVIEW.md`; the earlier integration snapshot remains in `docs/SECURITY_REVIEW.md` for history.
 
 ## Google and Gmail controls
 

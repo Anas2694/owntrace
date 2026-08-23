@@ -17,6 +17,10 @@ Response (`200 OK`):
 
 No authentication is required for the health check.
 
+`GET /api/health/ready`
+
+Returns `200 { "success": true, "status": "ready" }` only while MongoDB is connected. It returns `503 { "success": false, "status": "not_ready" }` otherwise. Hosting readiness checks should use this endpoint; it exposes no database address, credentials, user data, or internal error.
+
 ## Authentication
 
 Authentication uses the `owntrace_session` httpOnly cookie. Successful registration and login responses set the cookie; clients must send requests with credentials enabled. Password hashes and JWTs are never returned in JSON.
@@ -86,7 +90,7 @@ Used by the browser during startup. It returns the safe user shape for a valid s
 
 `POST /api/auth/logout`
 
-Clears the session cookie and returns:
+Revokes the presented active server-side session record and clears the browser cookie. It remains idempotent for missing, expired, malformed, or already-revoked cookies. Replaying the exact cookie captured before logout returns `401 INVALID_SESSION` on protected APIs. A successful response is:
 
 ```json
 {

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "smoke:production": "node scripts/smoke-production.mjs",
+    "serve:test-production": "node scripts/smoke-production.mjs --serve",
     "test": "vitest run"
   },
   "engines": {

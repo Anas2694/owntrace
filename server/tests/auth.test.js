@@ -13,6 +13,7 @@ import Account from '../src/models/account.model.js'
 import GoogleConnection from '../src/models/google-connection.model.js'
 import GmailSignal from '../src/models/gmail-signal.model.js'
 import GmailSyncJob from '../src/models/gmail-sync-job.model.js'
+import Session from '../src/models/session.model.js'
 import Subscription from '../src/models/subscription.model.js'
 import User from '../src/models/user.model.js'
 import { decryptSecret, encryptSecret } from '../src/utils/encryption.js'
@@ -32,6 +33,7 @@ beforeAll(async () => {
     GoogleConnection.init(),
     GmailSignal.init(),
     GmailSyncJob.init(),
+    Session.init(),
     Subscription.init(),
   ])
 })
@@ -222,12 +224,19 @@ describe('authentication API', () => {
 
     it('clears the cookie and ends the browser session on logout', async () => {
       const agent = request.agent(app)
-      await agent.post('/api/auth/register').send(validRegistration).expect(201)
+      const registration = await agent.post('/api/auth/register').send(validRegistration).expect(201)
+      const originalCookie = registration.headers['set-cookie'][0].split(';')[0]
 
       const response = await agent.post('/api/auth/logout').expect(200)
 
       expect(response.headers['set-cookie'][0]).toContain('owntrace_session=;')
+      expect(await Session.countDocuments()).toBe(0)
       await agent.get('/api/auth/me').expect(401)
+      const replay = await request(app)
+        .get('/api/auth/me')
+        .set('Cookie', originalCookie)
+        .expect(401)
+      expect(replay.body.code).toBe('INVALID_SESSION')
     })
   })
 
@@ -363,7 +372,8 @@ describe('authentication API', () => {
         AccountEvidence.countDocuments({ userId }),
         AccountAction.countDocuments({ userId }),
         Subscription.countDocuments({ userId }),
-      ])).toEqual([0, 0, 0, 0, 0, 0, 0, 0])
+        Session.countDocuments({ userId }),
+      ])).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0])
       await agent.get('/api/auth/me').expect(401)
     })
 

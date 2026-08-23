@@ -10,6 +10,7 @@ import RegisterPage from './features/auth/RegisterPage.jsx'
 import GmailConnectionPage from './features/google/GmailConnectionPage.jsx'
 import IdentityPage from './features/identity/IdentityPage.jsx'
 import LandingPage from './features/landing/LandingPage.jsx'
+import LegalPage from './features/legal/LegalPage.jsx'
 import OnboardingPage from './features/onboarding/OnboardingPage.jsx'
 import BreachesPage from './features/privacy/BreachesPage.jsx'
 import DashboardPage from './features/privacy/DashboardPage.jsx'
@@ -27,6 +28,8 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
       <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
+      <Route path="/privacy-policy" element={<LegalPage type="privacy" />} />
+      <Route path="/terms" element={<LegalPage type="terms" />} />
       <Route
         path="/onboarding"
         element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>}
