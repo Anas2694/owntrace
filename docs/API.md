@@ -204,7 +204,17 @@ Returns a paginated view of discovered accounts whose minimized evidence contain
 
 `GET /api/breaches`
 
-Returns an empty `breaches` array until a verified breach-data provider exists, together with provider status and a paginated `securitySignals` review list derived from `SECURITY_ALERT` or `PASSWORD_RESET` metadata. Every signal has `verifiedBreach: false`.
+Returns the authenticated user's cached, paginated verified breach names together with `breachPagination`, check/cache state, and a separately paginated `securitySignals` review list derived from `SECURITY_ALERT` or `PASSWORD_RESET` metadata. Use `breachPage`/`breachLimit` for verified breach records and `signalPage`/`signalLimit` for security signals; each defaults to page 1 with a limit of 24 and is capped at 100. Legacy `page` and `limit` apply to both collections for compatibility. Security signals always have `verifiedBreach: false` and are not verified check findings.
+
+`POST /api/breaches/check`
+
+Requires an explicit consent body before OwnTrace sends the authenticated user's OwnTrace account email to XposedOrNot, an external breach-data service:
+
+```json
+{ "consent": true }
+```
+
+OwnTrace stores only the XposedOrNot source identifier, up to 500 minimal breach names, safe timestamps, and safe error state; it never stores the submitted email, provider URL, raw provider response, Gmail data, or passwords. Responses larger than 256 KB or outside the expected shape are rejected. Successful results are cached for 24 hours. A second check within that interval returns the cache without contacting XposedOrNot. Actual outbound checks use sliding allowances of 90 per 24 hours, 20 per hour, and one per second for this single-instance beta. A multi-instance deployment must use a shared atomic limiter before scaling. Safe failure codes are `BREACH_CHECK_CONSENT_REQUIRED`, `BREACH_CHECK_IN_PROGRESS`, `BREACH_CHECK_RATE_LIMITED`, and `BREACH_CHECK_UNAVAILABLE`.
 
 ### Exposure review
 
@@ -216,7 +226,7 @@ Returns a paginated review projection over discovered account evidence. Levels p
 
 `GET /api/privacy-health`
 
-Returns `score: null` until account evidence exists. Otherwise it subtracts bounded penalties for dormant/possibly dormant accounts, lower-confidence accounts, and high-priority open actions from a 100-point baseline. The response includes every factor and identifies the result as a deterministic estimate rather than an audit.
+Returns `score: null` until account evidence or a verified breach report exists. Otherwise it subtracts bounded penalties for dormant/possibly dormant accounts, lower-confidence accounts, high-priority open actions, and verified breaches from a 100-point baseline. Verified breaches deduct 10 points each, capped at 30. The response includes every factor and identifies the result as a deterministic estimate rather than an audit.
 
 ### Privacy requests
 
@@ -230,7 +240,7 @@ Types are `ACCESS`, `DELETE`, `CORRECT`, and `OPT_OUT`. Statuses are `DRAFT`, `R
 
 `GET /api/notifications`
 
-Returns a bounded, read-only projection over open account actions and privacy requests in `READY` or `SENT` state. Notifications are not a separate persistent collection.
+Returns a bounded, read-only projection over open account actions, privacy requests in `READY` or `SENT` state, and currently cached verified breach reports. Notifications are not a separate persistent collection.
 
 ## Accounts
 

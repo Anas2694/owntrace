@@ -1,11 +1,23 @@
 import request from 'supertest'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import app from '../src/app.js'
 import Account from '../src/models/account.model.js'
+import BreachReport from '../src/models/breach-report.model.js'
 import PrivacyRequest from '../src/models/privacy-request.model.js'
 import User from '../src/models/user.model.js'
+import {
+  HOURLY_CHECK_LIMIT,
+  reserveProviderCheck,
+  resetProviderCheckRateLimitForTests,
+} from '../src/services/breach-provider-rate-limit.service.js'
 
 const password = 'a secure privacy feature password'
+
+function mockBreachProvider({ payload = { breaches: [] }, status = 200 } = {}) {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status }))
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
 
 async function registerUser(email) {
   const agent = request.agent(app)
@@ -40,7 +52,12 @@ async function createAccount(userId, overrides = {}) {
 }
 
 beforeAll(async () => {
-  await Promise.all([User.init(), Account.init(), PrivacyRequest.init()])
+  await Promise.all([User.init(), Account.init(), BreachReport.init(), PrivacyRequest.init()])
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  resetProviderCheckRateLimitForTests()
 })
 
 describe('Raphael-owned website feature APIs', () => {
@@ -54,6 +71,7 @@ describe('Raphael-owned website feature APIs', () => {
       '/api/privacy-requests',
     ]
     await Promise.all(routes.map((route) => request(app).get(route).expect(401)))
+    await request(app).post('/api/breaches/check').send({ consent: true }).expect(401)
     await request(app).post('/api/privacy-requests').send({}).expect(401)
     await request(app).patch('/api/privacy-requests/not-an-id').send({ status: 'READY' }).expect(401)
   })
@@ -90,7 +108,7 @@ describe('Raphael-owned website feature APIs', () => {
     await first.agent.get('/api/subscriptions?page[$gt]=0').expect(400)
   })
 
-  it('keeps verified breaches empty and labels metadata-derived security signals truthfully', async () => {
+  it('keeps verified breaches empty before an explicit check and labels metadata-derived security signals truthfully', async () => {
     const { agent, userId } = await registerUser('breach-signals@example.com')
     await createAccount(userId, {
       evidenceClasses: ['PASSWORD_RESET', 'SECURITY_ALERT'],
@@ -101,12 +119,142 @@ describe('Raphael-owned website feature APIs', () => {
 
     const response = await agent.get('/api/breaches').expect(200)
     expect(response.body.breaches).toEqual([])
-    expect(response.body.provider.configured).toBe(false)
+    expect(response.body.provider.status).toBe('NOT_CHECKED')
     expect(response.body.securitySignals).toHaveLength(1)
     expect(response.body.securitySignals[0]).toMatchObject({
       serviceName: 'Security Example',
       verifiedBreach: false,
     })
+  })
+
+  it('requires consent, caches verified breach names, and never exposes the checked email', async () => {
+    const { agent } = await registerUser('breach-cache@example.com')
+    const fetchMock = mockBreachProvider({ payload: { breaches: [['Adobe', 'LinkedIn', 'Adobe']] } })
+
+    const withoutConsent = await agent.post('/api/breaches/check').send({}).expect(400)
+    expect(withoutConsent.body.code).toBe('BREACH_CHECK_CONSENT_REQUIRED')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    const first = await agent.post('/api/breaches/check').send({ consent: true }).expect(200)
+    expect(first.body.reused).toBe(false)
+    expect(first.body.report.breaches).toEqual([{ name: 'Adobe' }, { name: 'LinkedIn' }])
+    expect(JSON.stringify(first.body)).not.toContain('breach-cache@example.com')
+
+    const second = await agent.post('/api/breaches/check').send({ consent: true }).expect(200)
+    expect(second.body.reused).toBe(true)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    resetProviderCheckRateLimitForTests()
+    for (let index = 0; index < HOURLY_CHECK_LIMIT; index += 1) {
+      reserveProviderCheck(3_600_000 + index * 1_000)
+    }
+    const cachedWhileQuotaIsFull = await agent.post('/api/breaches/check').send({ consent: true }).expect(200)
+    expect(cachedWhileQuotaIsFull.body.reused).toBe(true)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    const listed = await agent.get('/api/breaches').expect(200)
+    expect(listed.body.breaches).toEqual([{ name: 'Adobe' }, { name: 'LinkedIn' }])
+    expect(listed.body.provider).toMatchObject({
+      attribution: 'Verified results are supplied by XposedOrNot.',
+      id: 'XPOSED_OR_NOT',
+    })
+    expect(listed.body.provider.status).toBe('BREACHES_FOUND')
+    expect(JSON.stringify(listed.body)).not.toContain('breach-cache@example.com')
+  })
+
+  it('paginates verified breaches and security signals independently', async () => {
+    const { agent, userId } = await registerUser('breach-pagination@example.com')
+    const older = new Date('2025-01-01T00:00:00.000Z')
+    const newer = new Date('2025-02-01T00:00:00.000Z')
+    await Promise.all([
+      createAccount(userId, {
+        evidenceClasses: ['SECURITY_ALERT'],
+        firstSeenAt: older,
+        lastEvaluatedAt: older,
+        lastOwnershipEvidenceAt: older,
+        lastSeenAt: older,
+        primaryDomain: 'older-security.example',
+        serviceKey: 'older-security.example',
+        serviceName: 'Older Security Signal',
+      }),
+      createAccount(userId, {
+        evidenceClasses: ['PASSWORD_RESET'],
+        firstSeenAt: newer,
+        lastEvaluatedAt: newer,
+        lastOwnershipEvidenceAt: newer,
+        lastSeenAt: newer,
+        primaryDomain: 'newer-security.example',
+        serviceKey: 'newer-security.example',
+        serviceName: 'Newer Security Signal',
+      }),
+    ])
+    await BreachReport.create({
+      breaches: [{ name: 'Alpha Breach' }, { name: 'Beta Breach' }],
+      lastCheckedAt: newer,
+      nextCheckAt: new Date(newer.getTime() + 86_400_000),
+      userId,
+    })
+
+    const first = await agent.get('/api/breaches?breachPage=2&breachLimit=1&signalPage=1&signalLimit=1').expect(200)
+    expect(first.body.breaches).toEqual([{ name: 'Beta Breach' }])
+    expect(first.body.securitySignals).toMatchObject([{ serviceName: 'Newer Security Signal' }])
+
+    const second = await agent.get('/api/breaches?breachPage=1&breachLimit=1&signalPage=2&signalLimit=1').expect(200)
+    expect(second.body.breaches).toEqual([{ name: 'Alpha Breach' }])
+    expect(second.body.securitySignals).toMatchObject([{ serviceName: 'Older Security Signal' }])
+    await agent.get('/api/breaches?breachPage=0').expect(400)
+    await agent.get('/api/breaches?signalPage=0').expect(400)
+    await agent.get('/api/breaches?unexpectedControl=1').expect(400)
+  })
+
+  it('isolates verified breach reports and maps provider failures to safe errors', async () => {
+    const first = await registerUser('breach-private-first@example.com')
+    const second = await registerUser('breach-private-second@example.com')
+    mockBreachProvider({ payload: { breaches: [['Private Breach']] } })
+    await first.agent.post('/api/breaches/check').send({ consent: true }).expect(200)
+
+    const secondResult = await second.agent.get('/api/breaches').expect(200)
+    expect(secondResult.body.breaches).toEqual([])
+    expect(JSON.stringify(secondResult.body)).not.toContain('Private Breach')
+
+    resetProviderCheckRateLimitForTests()
+    const provider429Fetch = vi.fn().mockResolvedValue({ ok: false, status: 429 })
+    vi.stubGlobal('fetch', provider429Fetch)
+    const rateLimited = await second.agent.post('/api/breaches/check').send({ consent: true }).expect(429)
+    expect(rateLimited.body.code).toBe('BREACH_CHECK_RATE_LIMITED')
+    expect(provider429Fetch).toHaveBeenCalledTimes(1)
+    expect(JSON.stringify(rateLimited.body)).not.toContain('breach-private-second@example.com')
+  })
+
+  it('applies the shared burst allowance across different users before outbound checks', async () => {
+    const first = await registerUser('burst-first@example.com')
+    const second = await registerUser('burst-second@example.com')
+    const fetchMock = mockBreachProvider({ payload: { breaches: [] } })
+
+    const responses = await Promise.all([
+      first.agent.post('/api/breaches/check').send({ consent: true }),
+      second.agent.post('/api/breaches/check').send({ consent: true }),
+    ])
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 429])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('adds verified breaches to Privacy Health and derived notifications', async () => {
+    const { agent } = await registerUser('breach-risk@example.com')
+    mockBreachProvider({ payload: { breaches: [['Known Breach']] } })
+    await agent.post('/api/breaches/check').send({ consent: true }).expect(200)
+
+    const health = await agent.get('/api/privacy-health').expect(200)
+    expect(health.body.health.confidence).toBe('DERIVED_FROM_CURRENT_SIGNALS')
+    expect(health.body.health.factors).toContainEqual({ id: 'verifiedBreaches', penalty: 10 })
+
+    const notifications = await agent.get('/api/notifications').expect(200)
+    expect(notifications.body.notifications).toContainEqual(expect.objectContaining({
+      kind: 'VERIFIED_BREACH',
+      priority: 'HIGH',
+      target: '/breaches',
+      title: 'Known breach: Known Breach',
+    }))
   })
 
   it('returns bounded exposure review signals without claiming public exposure', async () => {
@@ -239,10 +387,18 @@ describe('Raphael-owned website feature APIs', () => {
       requestType: 'DELETE',
       serviceName: 'Deletion Example',
     }).expect(201)
+    await BreachReport.create({
+      breaches: [{ name: 'Deletion Breach' }],
+      lastCheckedAt: new Date(),
+      nextCheckAt: new Date(Date.now() + 86_400_000),
+      userId,
+    })
     expect(await PrivacyRequest.countDocuments({ userId })).toBe(1)
+    expect(await BreachReport.countDocuments({ userId })).toBe(1)
 
     await agent.delete('/api/auth/account').send({ confirmation: 'DELETE', password }).expect(200)
     expect(await PrivacyRequest.countDocuments({ userId })).toBe(0)
+    expect(await BreachReport.countDocuments({ userId })).toBe(0)
     expect(await User.countDocuments({ _id: userId })).toBe(0)
   })
 })

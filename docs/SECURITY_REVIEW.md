@@ -16,7 +16,7 @@ This is not a production-launch verdict. Google restricted-scope verification, m
 
 Reviewed: authentication, onboarding, Google OAuth, Gmail metadata sync, account discovery/evidence/confidence, account APIs, dormancy, identity graph, account actions, account deletion, dashboard, subscription signals, breach status/security signals, exposure review, Privacy Health, Privacy Inbox, privacy requests, notifications, frontend route protection, and responsive/keyboard behavior.
 
-Excluded/deferred: browser extension, mobile applications, Microsoft integration, data-broker infrastructure, verified breach-provider integration, automatic third-party privacy-request delivery, and production infrastructure operations.
+Excluded/deferred: browser extension, mobile applications, Microsoft integration, data-broker infrastructure, automatic third-party privacy-request delivery, and production infrastructure operations.
 
 ## Route inventory
 
@@ -44,7 +44,7 @@ Excluded/deferred: browser extension, mobile applications, Microsoft integration
 | `PATCH /api/account-actions/:id` | Owner-restricted update | ID plus current user ID | Allowlisted transitions; safe 404 |
 | `GET /api/identity` | Owner-restricted graph | Every source query includes current user ID | Rendered accounts capped at 200 |
 | `GET /api/subscriptions` | Owner-restricted list | Query includes current user ID | Pagination only; limit ≤100 |
-| `GET /api/breaches` | Owner-restricted list | Query includes current user ID | Pagination only; verified list remains empty without provider |
+| `GET /api/breaches` and `POST /api/breaches/check` | Owner-restricted list/check | Query includes current user ID; explicit consent required for outbound check | Cached minimal verified names; 24-hour refresh boundary |
 | `GET /api/exposures` | Owner-restricted list | Query includes current user ID | Pagination only; limit ≤100 |
 | `GET /api/privacy-health` | Owner-restricted summary | Reuses user-scoped account/action services | Deterministic bounded penalties |
 | `GET /api/privacy-requests` | Owner-restricted list | Query includes current user ID | Status allowlist; limit ≤100 |
@@ -62,7 +62,8 @@ Excluded/deferred: browser extension, mobile applications, Microsoft integration
 - OAuth requests exactly `openid`, `email`, and `gmail.metadata`; earlier grants are not automatically included.
 - Access and refresh tokens use authenticated AES-256-GCM encryption at rest and are excluded from standard queries, responses, and logs.
 - Gmail sync requests selected metadata headers only, bounds work, limits concurrency, persists resumable progress, and deduplicates with user-scoped HMAC identifiers.
-- Stored Gmail-derived content is minimized; bodies, snippets, raw MIME, attachments, provider IDs, and raw evidence are not exposed.
+- Stored Gmail-derived content is minimized; bodies, snippets, raw MIME, attachments, provider IDs, and raw evidence are not exposed. Manual verified breach checks store only minimal breach names and safe timestamps.
+- The low-volume beta uses XposedOrNot's free API. OwnTrace clearly discloses that the account email is sent to XposedOrNot and applies sliding in-memory limits of 90 outbound checks per 24 hours, 20 per hour, and one per second; cached results do not consume this allowance. A multi-instance deployment must move this limiter to a shared store before scaling.
 - Account discovery, confidence, dormancy, graph projection, cleanup recommendations, and Privacy Health are deterministic, explainable, bounded, and user-scoped.
 - Subscription, breach-status, and exposure views reuse derived account records. They do not duplicate discovery or expose Gmail identifiers.
 - Security-related metadata is explicitly marked unverified and never represented as a confirmed breach or public exposure.
@@ -93,7 +94,7 @@ Excluded/deferred: browser extension, mobile applications, Microsoft integration
 ## Residual launch requirements
 
 - Complete Google's verification and restricted-scope security assessment before public production Gmail access.
-- Integrate an authoritative breach provider before presenting verified breach records.
+- Reassess the breach-data service's reliability, terms, and rate limits before scaling beyond manual low-volume checks.
 - Add a reviewed delivery mechanism before OwnTrace sends privacy requests to third parties.
 - Use managed secrets, HTTPS, production-only origins/redirects, database backups, monitoring, alerting, and a tested recovery/incident process.
 - Use a shared rate-limit store if the API runs on multiple instances.

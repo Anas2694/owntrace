@@ -241,6 +241,23 @@
 .privacy-form .privacy-form-actions { display: flex; grid-column: 1 / -1; align-items: center; gap: 1rem; }
 .privacy-form .privacy-form-actions p { margin: 0; font-size: 0.72rem; }
 
+.privacy-breach-check { margin-bottom: 1rem; }
+.privacy-breach-check > p { max-width: 48rem; margin: 0 0 1rem; font-size: 0.82rem; }
+.privacy-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 1rem 0;
+  color: #effff3;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.privacy-consent input { width: 1.1rem; height: 1.1rem; margin: 0.05rem 0 0; accent-color: var(--color-accent); }
+.privacy-breach-check-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem; }
+.privacy-breach-check-actions p { margin: 0; font-size: 0.72rem; }
+.privacy-breach-disclaimer { color: var(--color-text-soft) !important; font-size: 0.68rem !important; }
+.privacy-check-error { margin: 1rem 0; }
+
 .privacy-note {
   margin: 0 0 1rem;
   padding: 0.9rem 1rem;
@@ -269,6 +286,7 @@
   .privacy-form { grid-template-columns: 1fr; }
   .privacy-form label.is-full { grid-column: auto; }
   .privacy-form .privacy-form-actions { grid-column: auto; align-items: stretch; flex-direction: column; }
+  .privacy-breach-check-actions { align-items: stretch; flex-direction: column; }
   .privacy-section-heading { align-items: flex-start; flex-direction: column; }
 }
 
