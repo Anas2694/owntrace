@@ -42,9 +42,12 @@ The sync does not request or store bodies, snippets, raw MIME, or attachments. S
 - HMAC-derived provider message and thread identifiers
 - sender email and domain
 - a normalized subject signal with email addresses and long numeric strings redacted
+- optional structured billing amount, explicit currency, and billing-cycle facts extracted before redaction
 - the provider message date
 
-Disconnect revokes the provider token before deleting the connection, current job, derived signals, Gmail-derived account evidence, account actions for removed accounts, and accounts with no remaining evidence. If Google cannot be reached, OwnTrace preserves local state and asks the user to retry so it does not falsely claim access was revoked.
+Structured billing facts are deterministic metadata derivatives; raw subjects are not copied into subscription records. Ambiguous currency symbols are not assigned a currency.
+
+Disconnect revokes the provider token before deleting the connection, current job, derived signals, Gmail-derived account evidence, subscription records, account actions for removed accounts, and accounts with no remaining evidence. If Google cannot be reached, OwnTrace preserves local state and asks the user to retry so it does not falsely claim access was revoked.
 
 ## Local configuration
 

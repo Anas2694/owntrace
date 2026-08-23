@@ -14,4 +14,17 @@ function formatEnum(value) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-export { formatDate, formatEnum }
+function formatMoney(amountMinor, currency) {
+  if (!Number.isInteger(amountMinor) || !currency) return 'Not available'
+  const divisor = currency === 'JPY' ? 1 : 100
+  try {
+    return new Intl.NumberFormat(undefined, {
+      currency,
+      style: 'currency',
+    }).format(amountMinor / divisor)
+  } catch {
+    return 'Not available'
+  }
+}
+
+export { formatDate, formatEnum, formatMoney }

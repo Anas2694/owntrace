@@ -4,6 +4,7 @@ import app from '../src/app.js'
 import Account from '../src/models/account.model.js'
 import BreachReport from '../src/models/breach-report.model.js'
 import PrivacyRequest from '../src/models/privacy-request.model.js'
+import Subscription from '../src/models/subscription.model.js'
 import User from '../src/models/user.model.js'
 import {
   HOURLY_CHECK_LIMIT,
@@ -51,8 +52,37 @@ async function createAccount(userId, overrides = {}) {
   })
 }
 
+async function createSubscription(userId, overrides = {}) {
+  const observedAt = overrides.lastSeenAt || new Date()
+  return Subscription.create({
+    amountMinor: 1_299,
+    basis: ['PAYMENT', 'SUBSCRIPTION'],
+    billingCycle: 'MONTHLY',
+    confidenceLevel: 'LIKELY',
+    confidenceScore: 85,
+    currency: 'USD',
+    evidenceCount: 2,
+    firstSeenAt: observedAt,
+    lastPaymentAt: observedAt,
+    lastSeenAt: observedAt,
+    nextRenewalAt: new Date(observedAt.getTime() + 30 * 86_400_000),
+    primaryDomain: 'music.example',
+    renewalIsEstimated: true,
+    serviceKey: 'music.example',
+    serviceName: 'Music Example',
+    userId,
+    ...overrides,
+  })
+}
+
 beforeAll(async () => {
-  await Promise.all([User.init(), Account.init(), BreachReport.init(), PrivacyRequest.init()])
+  await Promise.all([
+    User.init(),
+    Account.init(),
+    BreachReport.init(),
+    PrivacyRequest.init(),
+    Subscription.init(),
+  ])
 })
 
 afterEach(() => {
@@ -76,17 +106,12 @@ describe('Raphael-owned website feature APIs', () => {
     await request(app).patch('/api/privacy-requests/not-an-id').send({ status: 'READY' }).expect(401)
   })
 
-  it('returns bounded subscription signals for only the authenticated user', async () => {
+  it('returns bounded subscription records for only the authenticated user', async () => {
     const first = await registerUser('subscriptions-first@example.com')
     const second = await registerUser('subscriptions-second@example.com')
     await Promise.all([
-      createAccount(first.userId, {
-        evidenceClasses: ['PAYMENT', 'SUBSCRIPTION'],
-        primaryDomain: 'music.example',
-        serviceKey: 'music.example',
-        serviceName: 'Music Example',
-      }),
-      createAccount(second.userId, {
+      createSubscription(first.userId),
+      createSubscription(second.userId, {
         primaryDomain: 'private.example',
         serviceKey: 'private.example',
         serviceName: 'Private Subscription',
@@ -96,11 +121,13 @@ describe('Raphael-owned website feature APIs', () => {
     const response = await first.agent.get('/api/subscriptions?page=1&limit=1').expect(200)
     expect(response.body.pagination).toEqual({ limit: 1, page: 1, pages: 1, total: 1 })
     expect(response.body.subscriptions[0]).toMatchObject({
+      amountMinor: 1_299,
       basis: ['PAYMENT', 'SUBSCRIPTION'],
-      detection: 'GMAIL_METADATA_SIGNAL',
-      price: null,
-      renewalDate: null,
+      billingCycle: 'MONTHLY',
+      confidenceLevel: 'LIKELY',
+      currency: 'USD',
       serviceName: 'Music Example',
+      source: 'GMAIL_METADATA',
     })
     expect(JSON.stringify(response.body)).not.toContain('Private Subscription')
     expect(response.body.subscriptions[0]).not.toHaveProperty('userId')
@@ -393,12 +420,15 @@ describe('Raphael-owned website feature APIs', () => {
       nextCheckAt: new Date(Date.now() + 86_400_000),
       userId,
     })
+    await createSubscription(userId)
     expect(await PrivacyRequest.countDocuments({ userId })).toBe(1)
     expect(await BreachReport.countDocuments({ userId })).toBe(1)
+    expect(await Subscription.countDocuments({ userId })).toBe(1)
 
     await agent.delete('/api/auth/account').send({ confirmation: 'DELETE', password }).expect(200)
     expect(await PrivacyRequest.countDocuments({ userId })).toBe(0)
     expect(await BreachReport.countDocuments({ userId })).toBe(0)
+    expect(await Subscription.countDocuments({ userId })).toBe(0)
     expect(await User.countDocuments({ _id: userId })).toBe(0)
   })
 })

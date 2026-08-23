@@ -32,4 +32,4 @@ Cross-feature changes should be agreed in pull requests before implementation.
 
 ## User-deletion contract
 
-`DELETE /api/auth/account` removes the authenticated user's profile, every Anas-owned record, and Raphael-owned privacy-request records through the explicit `deleteRaphaelOwnedDataForUser` service contract. Other Raphael-owned views are derived and do not create persistent collections. Feature code must continue to use an owned deletion service rather than inspecting another owner's collections ad hoc.
+`DELETE /api/auth/account` removes the authenticated user's profile, every Anas-owned record, and Raphael-owned privacy-request, subscription, and breach-report records through the explicit `deleteRaphaelOwnedDataForUser` service contract. Gmail disconnect removes user-scoped subscriptions through the subscription-owned service before deleting their minimized source signals. Feature code must continue to use owned deletion services rather than inspecting another owner's collections ad hoc.

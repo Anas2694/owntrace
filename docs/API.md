@@ -194,11 +194,11 @@ Safe error codes include `GOOGLE_NOT_CONNECTED`, `GOOGLE_RECONNECT_REQUIRED`, `G
 
 Every endpoint below requires the authenticated `owntrace_session` cookie. List endpoints accept positive `page` and `limit` values; limits are capped at 100, except notifications which are capped at 50. Unsupported query controls return `400`.
 
-### Subscription signals
+### Subscription detections
 
 `GET /api/subscriptions`
 
-Returns a paginated view of discovered accounts whose minimized evidence contains `SUBSCRIPTION` or `PAYMENT` classes. Items identify the evidence basis and explicitly return unknown price and renewal date values. A signal does not confirm an active charge.
+Returns authenticated, user-scoped `Subscription` records created deterministically after a completed Gmail metadata scan. Each item includes service identity, `PAYMENT`/`SUBSCRIPTION` evidence basis, confidence, evidence count, optional amount/currency, billing cycle, last payment date, and an explicitly estimated next renewal date. Amounts are integer minor currency units. Ambiguous currency symbols are not converted into amounts, marketing-only messages are excluded, and no detection claims that a subscription is currently active. Repeated scans update the same user/service record instead of creating duplicates.
 
 ### Breach status and security signals
 

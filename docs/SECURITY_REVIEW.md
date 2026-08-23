@@ -43,7 +43,7 @@ Excluded/deferred: browser extension, mobile applications, Microsoft integration
 | `GET /api/account-actions/summary` | Owner-restricted summary | Query includes current user ID | Deterministic derived counts |
 | `PATCH /api/account-actions/:id` | Owner-restricted update | ID plus current user ID | Allowlisted transitions; safe 404 |
 | `GET /api/identity` | Owner-restricted graph | Every source query includes current user ID | Rendered accounts capped at 200 |
-| `GET /api/subscriptions` | Owner-restricted list | Query includes current user ID | Pagination only; limit ≤100 |
+| `GET /api/subscriptions` | Owner-restricted list | Query includes current user ID | Pagination only; limit ≤100; internal evidence references excluded |
 | `GET /api/breaches` and `POST /api/breaches/check` | Owner-restricted list/check | Query includes current user ID; explicit consent required for outbound check | Cached minimal verified names; 24-hour refresh boundary |
 | `GET /api/exposures` | Owner-restricted list | Query includes current user ID | Pagination only; limit ≤100 |
 | `GET /api/privacy-health` | Owner-restricted summary | Reuses user-scoped account/action services | Deterministic bounded penalties |
@@ -62,13 +62,13 @@ Excluded/deferred: browser extension, mobile applications, Microsoft integration
 - OAuth requests exactly `openid`, `email`, and `gmail.metadata`; earlier grants are not automatically included.
 - Access and refresh tokens use authenticated AES-256-GCM encryption at rest and are excluded from standard queries, responses, and logs.
 - Gmail sync requests selected metadata headers only, bounds work, limits concurrency, persists resumable progress, and deduplicates with user-scoped HMAC identifiers.
-- Stored Gmail-derived content is minimized; bodies, snippets, raw MIME, attachments, provider IDs, and raw evidence are not exposed. Manual verified breach checks store only minimal breach names and safe timestamps.
+- Stored Gmail-derived content is minimized; bodies, snippets, raw MIME, attachments, provider IDs, and raw evidence are not exposed. Subscription records retain only structured billing facts and bounded internal signal references; manual verified breach checks store only minimal breach names and safe timestamps.
 - The low-volume beta uses XposedOrNot's free API. OwnTrace clearly discloses that the account email is sent to XposedOrNot and applies sliding in-memory limits of 90 outbound checks per 24 hours, 20 per hour, and one per second; cached results do not consume this allowance. A multi-instance deployment must move this limiter to a shared store before scaling.
 - Account discovery, confidence, dormancy, graph projection, cleanup recommendations, and Privacy Health are deterministic, explainable, bounded, and user-scoped.
-- Subscription, breach-status, and exposure views reuse derived account records. They do not duplicate discovery or expose Gmail identifiers.
+- Subscription detection independently upserts user/service records from minimized metadata, excludes marketing-only messages, labels confidence and renewal estimates, and never exposes Gmail identifiers or claims active billing. Breach-status and exposure views reuse derived account records.
 - Security-related metadata is explicitly marked unverified and never represented as a confirmed breach or public exposure.
 - Privacy requests store only a service label, type, lifecycle status, and optional bounded notes; no request is sent externally.
-- Account deletion requires password reauthentication plus explicit text confirmation and invokes the Raphael-owned deletion service before removing the user.
+- Account deletion requires password reauthentication plus explicit text confirmation and invokes the Raphael-owned deletion service for privacy requests, subscriptions, and breach reports before removing the user. Gmail disconnect removes subscriptions before their source signals.
 - API errors return safe operational codes; unexpected server errors do not expose stack traces or secret values.
 
 ## Remediation completed
@@ -100,5 +100,14 @@ Excluded/deferred: browser extension, mobile applications, Microsoft integration
 - Use a shared rate-limit store if the API runs on multiple instances.
 - Evaluate MongoDB transactions or a deletion job/quiescence mechanism before high-concurrency production account deletion.
 - Define retention, backup-erasure, privacy-policy, and user-support procedures for production operations.
+
+## Subscription detection validation addendum
+
+Validated on 2026-08-24 from branch `anas/subscription-detection`, based on merged `main` commit `149117302b220543d6c7d3f5e4277f5053df5906`.
+
+- Full server suite: 97 tests passed across nine files, including deterministic extraction, idempotency, two-user isolation, API serialization, Gmail disconnect, and permanent deletion.
+- Client lint and production build, server JavaScript syntax checks, and root/client/server dependency audits passed; all three audits reported zero known vulnerabilities.
+- The tracked-file credential-pattern scan and `git diff --check` passed.
+- Frontend runtime smoke checks returned `200` for `/`, `/dashboard`, and `/subscriptions`. A direct local API smoke check could not start because the configured MongoDB Atlas SRV hostname was unreachable from the validation environment; database-backed API behavior passed against `mongodb-memory-server`.
 
 No secrets, real environment files, production data, provider tokens, or email bodies are included in this review document.
