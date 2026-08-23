@@ -78,10 +78,10 @@ function BreachesPage() {
             <div><p>Manual check</p><h2 id="breach-check-title">Check your OwnTrace account email</h2></div>
             <StatusPill tone={provider.status === 'BREACHES_FOUND' ? 'high' : provider.status === 'CLEAR' ? 'good' : 'medium'}>{formatEnum(provider.status)}</StatusPill>
           </div>
-          <p>OwnTrace will securely check your signed-in account email against known breach records. Gmail messages, passwords, and discovered account data are not sent.</p>
+          <p>OwnTrace will send your signed-in account email to XposedOrNot, an external breach-data service, to check known breach records. Gmail messages, passwords, and discovered account data are not sent.</p>
           <label className="privacy-consent">
             <input checked={consent} disabled={isChecking} onChange={(event) => setConsent(event.target.checked)} type="checkbox" />
-            <span>I understand and want OwnTrace to check my account email for known breach records.</span>
+            <span>I understand and want OwnTrace to send my account email to XposedOrNot for this breach check.</span>
           </label>
           <div className="privacy-breach-check-actions">
             <button className="privacy-action is-primary" disabled={!consent || isChecking} onClick={checkBreaches} type="button">
@@ -90,7 +90,7 @@ function BreachesPage() {
             <p>{provider.message}</p>
           </div>
           {checkError ? <p className="privacy-error privacy-check-error" role="alert">{checkError}</p> : null}
-          <p className="privacy-breach-disclaimer">A verified breach record means the account email appeared in a known breach; it does not prove a current account compromise.</p>
+          <p className="privacy-breach-disclaimer">Source: XposedOrNot. A verified breach record means the account email appeared in a known breach; it does not prove a current account compromise.</p>
       </section>
       {notice ? <p aria-live="polite" className="privacy-note">{notice}</p> : null}
       {loadError ? <ErrorState>{loadError} <button className="privacy-action" onClick={retryLoad} type="button">Retry</button></ErrorState> : null}

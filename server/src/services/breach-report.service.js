@@ -19,10 +19,12 @@ function serializeBreachReport(report, now = new Date()) {
   return {
     breaches: (report?.breaches || []).map((breach) => ({ name: breach.name })),
     provider: {
+      attribution: 'Verified results are supplied by XposedOrNot.',
+      id: XPOSED_OR_NOT_PROVIDER,
       lastCheckedAt: checkedAt,
       message: checkedAt
         ? 'Your verified results are saved for 24 hours after a security check.'
-        : 'Run a security check whenever you are ready.',
+        : 'Check your OwnTrace account email when you are ready to share it with XposedOrNot.',
       nextCheckAt,
       requiresConsent: true,
       status: reportStatus(report),
@@ -70,7 +72,7 @@ async function acquireCheckLock(userId, now) {
 async function checkBreachesForUser(userId, input = {}, now = new Date()) {
   if (input?.consent !== true) {
     throw new AppError(
-      'Confirm that you want OwnTrace to check your account email before continuing.',
+      'Confirm that OwnTrace may send your account email to XposedOrNot before checking.',
       400,
       'BREACH_CHECK_CONSENT_REQUIRED',
     )

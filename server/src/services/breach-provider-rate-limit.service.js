@@ -7,9 +7,7 @@ const DAY_MS = 24 * 60 * 60 * 1_000
 const HOUR_MS = 60 * 60 * 1_000
 const SECOND_MS = 1_000
 
-let hourlyWindow = { count: 0, startedAt: 0 }
-let dailyWindow = { count: 0, startedAt: 0 }
-let secondWindow = { count: 0, startedAt: 0 }
+let checkTimestamps = []
 
 function rateLimitError() {
   return new AppError(
@@ -20,27 +18,23 @@ function rateLimitError() {
 }
 
 function reserveProviderCheck(now = Date.now()) {
-  if (now - dailyWindow.startedAt >= DAY_MS) dailyWindow = { count: 0, startedAt: now }
-  if (now - hourlyWindow.startedAt >= HOUR_MS) hourlyWindow = { count: 0, startedAt: now }
-  if (now - secondWindow.startedAt >= SECOND_MS) secondWindow = { count: 0, startedAt: now }
+  checkTimestamps = checkTimestamps.filter((timestamp) => now - timestamp < DAY_MS)
+  const hourlyCount = checkTimestamps.filter((timestamp) => now - timestamp < HOUR_MS).length
+  const secondCount = checkTimestamps.filter((timestamp) => now - timestamp < SECOND_MS).length
 
   if (
-    dailyWindow.count >= DAILY_CHECK_LIMIT
-    || hourlyWindow.count >= HOURLY_CHECK_LIMIT
-    || secondWindow.count >= SECOND_CHECK_LIMIT
+    checkTimestamps.length >= DAILY_CHECK_LIMIT
+    || hourlyCount >= HOURLY_CHECK_LIMIT
+    || secondCount >= SECOND_CHECK_LIMIT
   ) {
     throw rateLimitError()
   }
 
-  dailyWindow.count += 1
-  hourlyWindow.count += 1
-  secondWindow.count += 1
+  checkTimestamps.push(now)
 }
 
 function resetProviderCheckRateLimitForTests() {
-  hourlyWindow = { count: 0, startedAt: 0 }
-  dailyWindow = { count: 0, startedAt: 0 }
-  secondWindow = { count: 0, startedAt: 0 }
+  checkTimestamps = []
 }
 
 export {

@@ -154,6 +154,10 @@ describe('Raphael-owned website feature APIs', () => {
 
     const listed = await agent.get('/api/breaches').expect(200)
     expect(listed.body.breaches).toEqual([{ name: 'Adobe' }, { name: 'LinkedIn' }])
+    expect(listed.body.provider).toMatchObject({
+      attribution: 'Verified results are supplied by XposedOrNot.',
+      id: 'XPOSED_OR_NOT',
+    })
     expect(listed.body.provider.status).toBe('BREACHES_FOUND')
     expect(JSON.stringify(listed.body)).not.toContain('breach-cache@example.com')
   })

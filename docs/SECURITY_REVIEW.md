@@ -63,7 +63,7 @@ Excluded/deferred: browser extension, mobile applications, Microsoft integration
 - Access and refresh tokens use authenticated AES-256-GCM encryption at rest and are excluded from standard queries, responses, and logs.
 - Gmail sync requests selected metadata headers only, bounds work, limits concurrency, persists resumable progress, and deduplicates with user-scoped HMAC identifiers.
 - Stored Gmail-derived content is minimized; bodies, snippets, raw MIME, attachments, provider IDs, and raw evidence are not exposed. Manual verified breach checks store only minimal breach names and safe timestamps.
-- The low-volume beta uses XposedOrNot's free API. OwnTrace applies an in-memory limit of 20 outbound checks per hour and one per second; cached results do not consume this allowance. A multi-instance deployment must move this limiter to a shared store before scaling.
+- The low-volume beta uses XposedOrNot's free API. OwnTrace clearly discloses that the account email is sent to XposedOrNot and applies sliding in-memory limits of 90 outbound checks per 24 hours, 20 per hour, and one per second; cached results do not consume this allowance. A multi-instance deployment must move this limiter to a shared store before scaling.
 - Account discovery, confidence, dormancy, graph projection, cleanup recommendations, and Privacy Health are deterministic, explainable, bounded, and user-scoped.
 - Subscription, breach-status, and exposure views reuse derived account records. They do not duplicate discovery or expose Gmail identifiers.
 - Security-related metadata is explicitly marked unverified and never represented as a confirmed breach or public exposure.

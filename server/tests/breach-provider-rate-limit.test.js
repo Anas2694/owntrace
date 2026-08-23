@@ -26,6 +26,16 @@ describe('shared breach-check quota', () => {
       .toThrow('Too many security checks')
   })
 
+  it('does not reset the hourly allowance at a fixed-window boundary', () => {
+    const firstCheck = 3_580_000
+    for (let index = 0; index < HOURLY_CHECK_LIMIT; index += 1) {
+      reserveProviderCheck(firstCheck + index * 1_000)
+    }
+
+    expect(() => reserveProviderCheck(3_600_000)).toThrow('Too many security checks')
+    expect(() => reserveProviderCheck(firstCheck + 3_600_000)).not.toThrow()
+  })
+
   it('prevents more than ninety outbound checks in one day', () => {
     const start = 7_200_000
     for (let index = 0; index < DAILY_CHECK_LIMIT; index += 1) {

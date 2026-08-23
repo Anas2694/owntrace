@@ -208,13 +208,13 @@ Returns the authenticated user's cached, paginated verified breach names togethe
 
 `POST /api/breaches/check`
 
-Requires an explicit consent body before OwnTrace sends the authenticated user's OwnTrace account email to its breach-data service:
+Requires an explicit consent body before OwnTrace sends the authenticated user's OwnTrace account email to XposedOrNot, an external breach-data service:
 
 ```json
 { "consent": true }
 ```
 
-OwnTrace stores only the internal source identifier, up to 500 minimal breach names, safe timestamps, and safe error state; it never stores the submitted email, source URL, raw source response, Gmail data, or passwords. Responses larger than 256 KB or outside the expected shape are rejected. Successful results are cached for 24 hours. A second check within that interval returns the cache without contacting the breach-data service. Actual outbound checks are limited to 90 per day, 20 per hour, and one per second for this single-instance beta. A multi-instance deployment must use a shared atomic limiter before scaling. Safe failure codes are `BREACH_CHECK_CONSENT_REQUIRED`, `BREACH_CHECK_IN_PROGRESS`, `BREACH_CHECK_RATE_LIMITED`, and `BREACH_CHECK_UNAVAILABLE`.
+OwnTrace stores only the XposedOrNot source identifier, up to 500 minimal breach names, safe timestamps, and safe error state; it never stores the submitted email, provider URL, raw provider response, Gmail data, or passwords. Responses larger than 256 KB or outside the expected shape are rejected. Successful results are cached for 24 hours. A second check within that interval returns the cache without contacting XposedOrNot. Actual outbound checks use sliding allowances of 90 per 24 hours, 20 per hour, and one per second for this single-instance beta. A multi-instance deployment must use a shared atomic limiter before scaling. Safe failure codes are `BREACH_CHECK_CONSENT_REQUIRED`, `BREACH_CHECK_IN_PROGRESS`, `BREACH_CHECK_RATE_LIMITED`, and `BREACH_CHECK_UNAVAILABLE`.
 
 ### Exposure review
 
