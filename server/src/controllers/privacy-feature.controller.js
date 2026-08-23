@@ -1,5 +1,8 @@
 import { listNotifications as listNotificationsForUser } from '../services/notification.service.js'
 import {
+  checkBreachesForUser,
+} from '../services/breach-report.service.js'
+import {
   getPrivacyHealth as getPrivacyHealthForUser,
   listBreachInsights as listBreachInsightsForUser,
   listExposureInsights as listExposureInsightsForUser,
@@ -18,6 +21,11 @@ async function listSubscriptions(request, response) {
 
 async function listBreachInsights(request, response) {
   const result = await listBreachInsightsForUser(request.auth.userId, request.query)
+  response.status(200).json({ success: true, ...result })
+}
+
+async function checkBreaches(request, response) {
+  const result = await checkBreachesForUser(request.auth.userId, request.body)
   response.status(200).json({ success: true, ...result })
 }
 
@@ -56,6 +64,7 @@ async function listNotifications(request, response) {
 }
 
 export {
+  checkBreaches,
   createPrivacyRequest,
   getPrivacyHealth,
   listBreachInsights,

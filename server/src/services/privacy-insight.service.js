@@ -1,6 +1,9 @@
 import Account from '../models/account.model.js'
+import BreachReport from '../models/breach-report.model.js'
 import { getAccountActionSummary } from './account-action.service.js'
 import { getAccountSummary } from './account.service.js'
+import { getBreachReportForUser, serializeBreachReport } from './breach-report.service.js'
+import AppError from '../utils/app-error.js'
 import { paginationFor, parseBoundedPagination } from '../utils/pagination.js'
 
 const subscriptionClasses = ['SUBSCRIPTION', 'PAYMENT']
@@ -20,6 +23,10 @@ function safeAccountProjection(account) {
 
 async function findAccountSignals(userId, rawQuery, evidenceClasses) {
   const { limit, page } = parseBoundedPagination(rawQuery)
+  return findAccountSignalsForPagination(userId, { limit, page }, evidenceClasses)
+}
+
+async function findAccountSignalsForPagination(userId, { limit, page }, evidenceClasses) {
   const filter = { evidenceClasses: { $in: evidenceClasses }, userId }
   const [accounts, total] = await Promise.all([
     Account.find(filter)
@@ -31,6 +38,33 @@ async function findAccountSignals(userId, rawQuery, evidenceClasses) {
     Account.countDocuments(filter),
   ])
   return { accounts, pagination: paginationFor({ limit, page, total }) }
+}
+
+function parseBreachPagination(rawQuery = {}) {
+  const supportedKeys = new Set([
+    'breachLimit',
+    'breachPage',
+    'limit',
+    'page',
+    'signalLimit',
+    'signalPage',
+  ])
+  if (Object.keys(rawQuery).some((key) => !supportedKeys.has(key))) {
+    throw new AppError('Choose supported query controls.', 400, 'INVALID_PAGINATION')
+  }
+
+  const legacyLimit = rawQuery.limit
+  const legacyPage = rawQuery.page
+  return {
+    breach: parseBoundedPagination({
+      limit: rawQuery.breachLimit ?? legacyLimit,
+      page: rawQuery.breachPage ?? legacyPage,
+    }),
+    signal: parseBoundedPagination({
+      limit: rawQuery.signalLimit ?? legacyLimit,
+      page: rawQuery.signalPage ?? legacyPage,
+    }),
+  }
 }
 
 async function listSubscriptions(userId, rawQuery = {}) {
@@ -52,14 +86,21 @@ async function listSubscriptions(userId, rawQuery = {}) {
 }
 
 async function listBreachInsights(userId, rawQuery = {}) {
-  const { accounts, pagination } = await findAccountSignals(userId, rawQuery, securityClasses)
+  const controls = parseBreachPagination(rawQuery)
+  const [{ accounts, pagination: signalPagination }, report] = await Promise.all([
+    findAccountSignalsForPagination(userId, controls.signal, securityClasses),
+    getBreachReportForUser(userId),
+  ])
+  const { breaches, provider } = serializeBreachReport(report)
+  const breachTotal = breaches.length
   return {
-    breaches: [],
-    pagination,
-    provider: {
-      configured: false,
-      message: 'No verified breach-data provider is connected.',
-    },
+    breaches: breaches.slice(
+      (controls.breach.page - 1) * controls.breach.limit,
+      controls.breach.page * controls.breach.limit,
+    ),
+    breachPagination: paginationFor({ ...controls.breach, total: breachTotal }),
+    pagination: signalPagination,
+    provider,
     securitySignals: accounts.map((account) => ({
       ...safeAccountProjection(account),
       basis: account.evidenceClasses.filter((value) => securityClasses.includes(value)),
@@ -99,11 +140,13 @@ async function listExposureInsights(userId, rawQuery = {}) {
 }
 
 async function getPrivacyHealth(userId) {
-  const [accounts, actions] = await Promise.all([
+  const [accounts, actions, breachReport] = await Promise.all([
     getAccountSummary(userId),
     getAccountActionSummary(userId),
+    BreachReport.findOne({ userId }).select('breaches lastCheckedAt').lean(),
   ])
-  if (accounts.total === 0) {
+  const verifiedBreachCount = breachReport?.lastCheckedAt ? breachReport.breaches.length : 0
+  if (accounts.total === 0 && verifiedBreachCount === 0) {
     return {
       confidence: 'NOT_ENOUGH_DATA',
       factors: [],
@@ -117,6 +160,7 @@ async function getPrivacyHealth(userId) {
     highPriorityActions: Math.min(24, actions.highPriority * 8),
     lowerConfidenceAccounts: Math.min(16, Math.max(0, accounts.total - accounts.highConfidence)),
     possiblyDormantAccounts: Math.min(10, accounts.possiblyDormant),
+    verifiedBreaches: Math.min(30, verifiedBreachCount * 10),
   }
   const score = Math.max(0, 100 - Object.values(penalties).reduce((sum, value) => sum + value, 0))
 

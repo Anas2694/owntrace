@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import {
+  checkBreaches,
   createPrivacyRequest,
   getPrivacyHealth,
   listBreachInsights,
@@ -16,6 +17,7 @@ const privacyFeatureRouter = Router()
 privacyFeatureRouter.use(requireAuth)
 privacyFeatureRouter.get('/subscriptions', listSubscriptions)
 privacyFeatureRouter.get('/breaches', listBreachInsights)
+privacyFeatureRouter.post('/breaches/check', checkBreaches)
 privacyFeatureRouter.get('/exposures', listExposureInsights)
 privacyFeatureRouter.get('/privacy-health', getPrivacyHealth)
 privacyFeatureRouter.get('/notifications', listNotifications)
