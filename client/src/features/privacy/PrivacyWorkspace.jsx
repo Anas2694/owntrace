@@ -28,6 +28,7 @@ const navigationGroups = [
     label: 'Connections',
     links: [
       { label: 'Gmail', to: '/connect/gmail' },
+      { label: 'Microsoft', to: '/connect/microsoft' },
       { label: 'Settings', to: '/settings' },
     ],
   },

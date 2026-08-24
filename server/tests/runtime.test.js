@@ -17,6 +17,10 @@ const managedEnvironmentNames = [
   'JWT_SECRET',
   'LOG_LEVEL',
   'MONGO_URI',
+  'MICROSOFT_CLIENT_ID',
+  'MICROSOFT_CLIENT_SECRET',
+  'MICROSOFT_REDIRECT_URI',
+  'MICROSOFT_SYNC_MESSAGE_LIMIT',
   'NODE_ENV',
   'PORT',
   'SHUTDOWN_TIMEOUT_MS',
@@ -44,6 +48,9 @@ function configureValidProductionEnvironment() {
     GOOGLE_REDIRECT_URI: 'https://app.owntrace.example/api/google/oauth/callback',
     JWT_SECRET: 'not-a-real-production-secret-with-at-least-32-characters',
     MONGO_URI: 'mongodb://database.example/owntrace',
+    MICROSOFT_CLIENT_ID: 'production-microsoft-client-id',
+    MICROSOFT_CLIENT_SECRET: 'not-a-real-microsoft-client-secret',
+    MICROSOFT_REDIRECT_URI: 'https://app.owntrace.example/api/microsoft/oauth/callback',
     NODE_ENV: 'production',
     TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString('base64'),
     TRUST_PROXY: '1',
@@ -99,5 +106,11 @@ describe('runtime configuration and health', () => {
     process.env.PORT = '5000'
     process.env.LOG_LEVEL = 'debug-with-sensitive-data'
     expect(() => getRuntimeConfig()).toThrow(/LOG_LEVEL/)
+  })
+
+  it('rejects an invalid Microsoft sync message limit', () => {
+    configureValidProductionEnvironment()
+    process.env.MICROSOFT_SYNC_MESSAGE_LIMIT = '24'
+    expect(() => validateRuntimeEnvironment()).toThrow(/MICROSOFT_SYNC_MESSAGE_LIMIT/)
   })
 })

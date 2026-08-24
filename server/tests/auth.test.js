@@ -13,6 +13,10 @@ import Account from '../src/models/account.model.js'
 import GoogleConnection from '../src/models/google-connection.model.js'
 import GmailSignal from '../src/models/gmail-signal.model.js'
 import GmailSyncJob from '../src/models/gmail-sync-job.model.js'
+import MicrosoftConnection from '../src/models/microsoft-connection.model.js'
+import MicrosoftSignal from '../src/models/microsoft-signal.model.js'
+import MicrosoftSubscription from '../src/models/microsoft-subscription.model.js'
+import MicrosoftSyncJob from '../src/models/microsoft-sync-job.model.js'
 import Session from '../src/models/session.model.js'
 import Subscription from '../src/models/subscription.model.js'
 import User from '../src/models/user.model.js'
@@ -33,6 +37,10 @@ beforeAll(async () => {
     GoogleConnection.init(),
     GmailSignal.init(),
     GmailSyncJob.init(),
+    MicrosoftConnection.init(),
+    MicrosoftSignal.init(),
+    MicrosoftSubscription.init(),
+    MicrosoftSyncJob.init(),
     Session.init(),
     Subscription.init(),
   ])
@@ -340,6 +348,21 @@ describe('authentication API', () => {
           serviceName: 'Example',
           userId,
         }),
+        MicrosoftConnection.create({
+          email: 'microsoft-delete@example.com',
+          encryptedAccessToken: encryptSecret('microsoft-delete-access-token'),
+          encryptedRefreshToken: encryptSecret('microsoft-delete-refresh-token'),
+          microsoftAccountId: 'delete-microsoft-account-id',
+          scopes: ['Mail.ReadBasic'],
+          tokenExpiresAt: new Date(Date.now() + 3_600_000),
+          userId,
+        }),
+      ])
+      const microsoftConnection = await MicrosoftConnection.findOne({ userId })
+      await Promise.all([
+        MicrosoftSignal.create({ connectionId: microsoftConnection.id, messageIdHash: 'microsoft-delete-message', occurredAt: now, threadIdHash: 'microsoft-delete-thread', userId }),
+        MicrosoftSyncJob.create({ connectionId: microsoftConnection.id, status: 'COMPLETED', userId }),
+        MicrosoftSubscription.create({ confidenceLevel: 'POSSIBLE', confidenceScore: 40, evidenceCount: 1, firstSeenAt: now, lastSeenAt: now, primaryDomain: 'microsoft-delete.example', serviceKey: 'microsoft-delete.example', serviceName: 'Microsoft Delete', userId }),
       ])
 
       await agent
@@ -372,8 +395,12 @@ describe('authentication API', () => {
         AccountEvidence.countDocuments({ userId }),
         AccountAction.countDocuments({ userId }),
         Subscription.countDocuments({ userId }),
+        MicrosoftConnection.countDocuments({ userId }),
+        MicrosoftSignal.countDocuments({ userId }),
+        MicrosoftSyncJob.countDocuments({ userId }),
+        MicrosoftSubscription.countDocuments({ userId }),
         Session.countDocuments({ userId }),
-      ])).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0])
+      ])).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
       await agent.get('/api/auth/me').expect(401)
     })
 

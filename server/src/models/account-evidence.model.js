@@ -30,15 +30,25 @@ const accountEvidenceSchema = new mongoose.Schema(
     },
     connectionId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'GoogleConnection',
       required: true,
       index: true,
+      select: false,
+    },
+    connectionProvider: {
+      type: String,
+      enum: ['GOOGLE', 'MICROSOFT'],
+      required: true,
+      default: 'GOOGLE',
       select: false,
     },
     gmailSignalId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'GmailSignal',
-      required: true,
+      select: false,
+    },
+    microsoftSignalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'MicrosoftSignal',
       select: false,
     },
     evidenceClass: {
@@ -73,12 +83,14 @@ const accountEvidenceSchema = new mongoose.Schema(
         delete returnedObject.userId
         delete returnedObject.connectionId
         delete returnedObject.gmailSignalId
+        delete returnedObject.microsoftSignalId
       },
     },
   },
 )
 
-accountEvidenceSchema.index({ userId: 1, gmailSignalId: 1 }, { unique: true })
+accountEvidenceSchema.index({ userId: 1, gmailSignalId: 1 }, { unique: true, partialFilterExpression: { gmailSignalId: { $exists: true } } })
+accountEvidenceSchema.index({ userId: 1, microsoftSignalId: 1 }, { unique: true, partialFilterExpression: { microsoftSignalId: { $exists: true } } })
 accountEvidenceSchema.index({ accountId: 1, occurredAt: -1 })
 accountEvidenceSchema.index({ userId: 1, evidenceClass: 1 })
 

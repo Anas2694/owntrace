@@ -3,6 +3,7 @@ import AccountAction from '../models/account-action.model.js'
 import AccountEvidence from '../models/account-evidence.model.js'
 import Account from '../models/account.model.js'
 import GmailSignal from '../models/gmail-signal.model.js'
+import MicrosoftSignal from '../models/microsoft-signal.model.js'
 import User from '../models/user.model.js'
 import { syncAccountActionsForUser } from './account-action.service.js'
 import { evaluateDormancy } from './account-dormancy.service.js'
@@ -183,10 +184,7 @@ function scoreEvidence(classifications) {
   return { confidenceLevel: getConfidenceLevel(score), confidenceScore: score }
 }
 
-async function discoverAccountsForUser(userId) {
-  const signals = await GmailSignal.find({ userId })
-    .sort({ occurredAt: 1, _id: 1 })
-    .lean()
+async function discoverAccountsFromSignals(userId, signals, signalField) {
   const groups = new Map()
 
   signals.forEach((signal) => {
@@ -238,13 +236,15 @@ async function discoverAccountsForUser(userId) {
     )
 
     await AccountEvidence.bulkWrite(
-      items.map(({ classification, signal }) => ({
-        updateOne: {
-          filter: { gmailSignalId: signal._id, userId },
+      items.map(({ classification, signal }) => {
+        const resolvedSignalField = signal._signalField || signalField
+        return { updateOne: {
+          filter: { [resolvedSignalField]: signal._id, userId },
           update: {
             $set: {
               accountId: account._id,
               connectionId: signal.connectionId,
+              connectionProvider: resolvedSignalField === 'microsoftSignalId' ? 'MICROSOFT' : 'GOOGLE',
               evidenceClass: classification.evidenceClass,
               evidenceWeight: classification.evidenceWeight,
               occurredAt: signal.occurredAt,
@@ -252,11 +252,11 @@ async function discoverAccountsForUser(userId) {
               reasonCode: classification.reasonCode,
               sourceDomain: signal.senderDomain,
             },
-            $setOnInsert: { gmailSignalId: signal._id, userId },
+            $setOnInsert: { [resolvedSignalField]: signal._id, userId },
           },
           upsert: true,
-        },
-      })),
+        } }
+      }),
       { ordered: false },
     )
   }
@@ -271,11 +271,26 @@ async function discoverAccountsForUser(userId) {
   }
 }
 
+async function discoverAccountsForUser(userId, excludedConnectionId = null) {
+  const providerFilter = excludedConnectionId ? { connectionId: { $ne: excludedConnectionId } } : {}
+  const [gmailSignals, microsoftSignals] = await Promise.all([
+    GmailSignal.find({ userId, ...providerFilter }).sort({ occurredAt: 1, _id: 1 }).lean(),
+    MicrosoftSignal.find({ userId, ...providerFilter }).sort({ occurredAt: 1, _id: 1 }).lean(),
+  ])
+  const signals = [
+    ...gmailSignals.map((signal) => ({ ...signal, _signalField: 'gmailSignalId' })),
+    ...microsoftSignals.map((signal) => ({ ...signal, _signalField: 'microsoftSignalId' })),
+  ].sort((first, second) => new Date(first.occurredAt) - new Date(second.occurredAt))
+  return discoverAccountsFromSignals(userId, signals, 'gmailSignalId')
+}
+
 async function removeConnectionDiscoveries(userId, connectionId) {
   const evidence = await AccountEvidence.find({ connectionId, userId }).select('accountId').lean()
   const accountIds = [...new Set(evidence.map((item) => item.accountId.toString()))]
 
   await AccountEvidence.deleteMany({ connectionId, userId })
+
+  if (accountIds.length) await discoverAccountsForUser(userId, connectionId)
 
   for (const accountId of accountIds) {
     const remainingEvidence = await AccountEvidence.exists({ accountId, userId })
@@ -290,6 +305,7 @@ async function removeConnectionDiscoveries(userId, connectionId) {
 
 export {
   classifyEvidence,
+  discoverAccountsFromSignals,
   discoverAccountsForUser,
   getConfidenceLevel,
   getServiceName,

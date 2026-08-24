@@ -194,6 +194,14 @@ A completed bounded sync automatically runs deterministic account discovery. Acc
 
 Safe error codes include `GOOGLE_NOT_CONNECTED`, `GOOGLE_RECONNECT_REQUIRED`, `GOOGLE_RATE_LIMITED`, `GOOGLE_REQUEST_FAILED`, `GMAIL_SYNC_NOT_STARTED`, `GMAIL_SYNC_IN_PROGRESS`, `PARTIAL_METADATA_RESULTS`, and `MESSAGE_LIMIT_REACHED`.
 
+## Microsoft connection and metadata sync
+
+All Microsoft endpoints require the authenticated OwnTrace session. `GET /api/microsoft/connection` returns safe connection metadata only. `GET /api/microsoft/oauth/start` begins a server-side OAuth flow and requests exactly `openid`, `profile`, `email`, `offline_access`, `User.Read`, and `Mail.ReadBasic`; the callback returns to `/connect/microsoft` using a safe status code. Access and refresh tokens, provider account IDs, message IDs, and page links are never returned.
+
+`Mail.ReadBasic` is metadata-only. OwnTrace lists Inbox messages in browser-driven batches of at most 25 and requests only the sender email, subject, conversation ID, and received date supplied in each list result. It does not request bodies, snippets, attachments, raw MIME, or send/modify/delete permissions. `POST /api/microsoft/sync` starts a job, `POST /api/microsoft/sync/next` advances one batch, `GET /api/microsoft/sync` reads safe progress, and `DELETE /api/microsoft/sync` cancels an active scan. Graph pagination links remain server-only and are accepted only when they are HTTPS `graph.microsoft.com/v1.0` links.
+
+Completed scans feed the shared account-discovery pipeline through provider-specific minimized evidence references and deterministically create user-scoped `MicrosoftSubscription` projections. `GET /api/microsoft/subscriptions?page=1&limit=12` returns only the caller's records, with service identity, payment/subscription basis, confidence, optional amount/currency, cycle, and estimated renewal. Marketing-only evidence is excluded; no record claims a subscription is active. Disconnecting Microsoft removes its connection, sync job, minimized signals, Microsoft account evidence, account actions/accounts with no remaining evidence, and Microsoft subscription projections.
+
 ## Raphael-owned website APIs
 
 Every endpoint below requires the authenticated `owntrace_session` cookie. List endpoints accept positive `page` and `limit` values; limits are capped at 100, except notifications which are capped at 50. Unsupported query controls return `400`.
@@ -202,7 +210,7 @@ Every endpoint below requires the authenticated `owntrace_session` cookie. List 
 
 `GET /api/subscriptions`
 
-Returns authenticated, user-scoped `Subscription` records created deterministically after a completed Gmail metadata scan. Each item includes service identity, `PAYMENT`/`SUBSCRIPTION` evidence basis, confidence, evidence count, optional amount/currency, billing cycle, last payment date, and an explicitly estimated next renewal date. Amounts are integer minor currency units. Ambiguous currency symbols are not converted into amounts, marketing-only messages are excluded, and no detection claims that a subscription is currently active. Repeated scans update the same user/service record instead of creating duplicates.
+Returns authenticated, user-scoped subscription records created deterministically after completed Gmail or Microsoft metadata scans. Each item includes a `source` of `GMAIL_METADATA` or `MICROSOFT_METADATA`, service identity, `PAYMENT`/`SUBSCRIPTION` evidence basis, confidence, evidence count, optional amount/currency, billing cycle, last payment date, and an explicitly estimated next renewal date. Amounts are integer minor currency units. Ambiguous currency symbols are not converted into amounts, marketing-only messages are excluded, and no detection claims that a subscription is currently active. The existing dashboard and subscriptions page use this single aggregated API.
 
 ### Breach status and security signals
 

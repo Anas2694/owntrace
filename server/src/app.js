@@ -19,6 +19,7 @@ import healthRouter from './routes/health.routes.js'
 import identityRouter from './routes/identity.routes.js'
 import onboardingRouter from './routes/onboarding.routes.js'
 import privacyFeatureRouter from './routes/privacy-feature.routes.js'
+import microsoftRouter from './routes/microsoft.routes.js'
 
 const app = express()
 const runtime = getRuntimeConfig()
@@ -37,6 +38,7 @@ app.use(requireTrustedOrigin)
 app.use('/api/health', healthRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/google', googleRouter)
+app.use('/api/microsoft', microsoftRouter)
 app.use('/api/onboarding', onboardingRouter)
 app.use('/api/accounts', accountRouter)
 app.use('/api/account-actions', accountActionRouter)

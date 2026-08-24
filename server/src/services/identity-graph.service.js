@@ -1,6 +1,7 @@
 import AccountEvidence from '../models/account-evidence.model.js'
 import Account from '../models/account.model.js'
 import GoogleConnection from '../models/google-connection.model.js'
+import MicrosoftConnection from '../models/microsoft-connection.model.js'
 import User from '../models/user.model.js'
 import AppError from '../utils/app-error.js'
 
@@ -11,9 +12,10 @@ function addEdge(edges, source, target, type, label) {
 }
 
 async function getIdentityGraph(userId) {
-  const [user, connection, accounts, accountCount] = await Promise.all([
+  const [user, googleConnection, microsoftConnection, accounts, accountCount] = await Promise.all([
     User.findById(userId).select('email name').lean(),
     GoogleConnection.findOne({ userId }).select('email status').lean(),
+    MicrosoftConnection.findOne({ userId }).select('email status').lean(),
     Account.find({ userId })
       .sort({ confidenceScore: -1, serviceName: 1 })
       .limit(GRAPH_ACCOUNT_LIMIT)
@@ -42,24 +44,43 @@ async function getIdentityGraph(userId) {
   const edges = []
   addEdge(edges, 'profile', 'email:primary', 'AUTHENTICATES_AS', 'Authenticates as')
 
-  if (connection) {
+  if (googleConnection) {
     nodes.push({
       detail: 'Connected Google identity',
       id: 'google',
-      label: connection.email,
-      status: connection.status,
+      label: googleConnection.email,
+      status: googleConnection.status,
       type: 'GOOGLE_IDENTITY',
     })
     addEdge(edges, 'profile', 'google', 'CONNECTED_IDENTITY', 'Connected identity')
   }
 
-  const connectedAccountIds = new Set(connection
-    ? (await AccountEvidence.distinct('accountId', {
+  if (microsoftConnection) {
+    nodes.push({
+      detail: 'Connected Microsoft identity',
+      id: 'microsoft',
+      label: microsoftConnection.email,
+      status: microsoftConnection.status,
+      type: 'MICROSOFT_IDENTITY',
+    })
+    addEdge(edges, 'profile', 'microsoft', 'CONNECTED_IDENTITY', 'Connected identity')
+  }
+
+  const providerAccountIds = await Promise.all([
+    googleConnection ? AccountEvidence.distinct('accountId', {
       accountId: { $in: accounts.map((account) => account._id) },
-      connectionId: connection._id,
+      connectionId: googleConnection._id,
       userId,
-    })).map((accountId) => accountId.toString())
-    : [])
+    }) : [],
+    microsoftConnection ? AccountEvidence.distinct('accountId', {
+      accountId: { $in: accounts.map((account) => account._id) },
+      connectionId: microsoftConnection._id,
+      userId,
+    }) : [],
+  ])
+  const connectedAccountIds = new Set(providerAccountIds.flat().map((accountId) => accountId.toString()))
+  const googleAccountIds = new Set((providerAccountIds[0] || []).map((accountId) => accountId.toString()))
+  const microsoftAccountIds = new Set((providerAccountIds[1] || []).map((accountId) => accountId.toString()))
 
   accounts.forEach((account) => {
     const accountNodeId = `account:${account._id}`
@@ -83,9 +104,9 @@ async function getIdentityGraph(userId) {
       },
     )
 
-    if (connection && connectedAccountIds.has(account._id.toString())) {
-      addEdge(edges, 'google', accountNodeId, 'DISCOVERED_ACCOUNT', 'Discovered account')
-    } else {
+    if (googleAccountIds.has(account._id.toString())) addEdge(edges, 'google', accountNodeId, 'DISCOVERED_ACCOUNT', 'Discovered account')
+    if (microsoftAccountIds.has(account._id.toString())) addEdge(edges, 'microsoft', accountNodeId, 'DISCOVERED_ACCOUNT', 'Discovered account')
+    if (!connectedAccountIds.has(account._id.toString())) {
       addEdge(edges, 'profile', accountNodeId, 'HAS_ACCOUNT_EVIDENCE', 'Has account evidence')
     }
     addEdge(edges, accountNodeId, serviceNodeId, 'BELONGS_TO_SERVICE', 'Belongs to service')
@@ -97,7 +118,7 @@ async function getIdentityGraph(userId) {
     nodes,
     summary: {
       accountCount,
-      connectedIdentityCount: connection ? 1 : 0,
+      connectedIdentityCount: Number(Boolean(googleConnection)) + Number(Boolean(microsoftConnection)),
       emailIdentityCount: 1,
       renderedAccountCount: accounts.length,
       serviceCount: accountCount,

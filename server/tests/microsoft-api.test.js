@@ -1,0 +1,116 @@
+import request from 'supertest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import app from '../src/app.js'
+import Account from '../src/models/account.model.js'
+import AccountEvidence from '../src/models/account-evidence.model.js'
+import MicrosoftConnection from '../src/models/microsoft-connection.model.js'
+import MicrosoftSignal from '../src/models/microsoft-signal.model.js'
+import MicrosoftSyncJob from '../src/models/microsoft-sync-job.model.js'
+import MicrosoftSubscription from '../src/models/microsoft-subscription.model.js'
+import Subscription from '../src/models/subscription.model.js'
+import User from '../src/models/user.model.js'
+import { encryptSecret } from '../src/utils/encryption.js'
+
+const password = 'microsoft API test password'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+async function register(email) {
+  const agent = request.agent(app)
+  const response = await agent.post('/api/auth/register').send({ email, name: 'Microsoft API Test', password }).expect(201)
+  return { agent, userId: response.body.user.id }
+}
+
+describe('Microsoft integration API', () => {
+  it('requires authentication for every Microsoft integration route', async () => {
+    await Promise.all([
+      request(app).get('/api/microsoft/connection').expect(401),
+      request(app).get('/api/microsoft/sync').expect(401),
+      request(app).post('/api/microsoft/sync').expect(401),
+      request(app).post('/api/microsoft/sync/next').expect(401),
+      request(app).delete('/api/microsoft/sync').expect(401),
+      request(app).delete('/api/microsoft/connection').expect(401),
+      request(app).get('/api/microsoft/subscriptions').expect(401),
+    ])
+  })
+
+  it('serializes only safe connection data and scopes subscriptions to the signed-in user', async () => {
+    const first = await register('microsoft-api-first@example.com')
+    const second = await register('microsoft-api-second@example.com')
+    await MicrosoftConnection.create({
+      userId: first.userId, microsoftAccountId: 'microsoft-api-account', email: 'microsoft-api-first@example.com',
+      encryptedAccessToken: encryptSecret('private-access-token'), encryptedRefreshToken: encryptSecret('private-refresh-token'),
+      scopes: ['Mail.ReadBasic'], tokenExpiresAt: new Date(Date.now() + 3_600_000),
+    })
+    await Promise.all([
+      MicrosoftSubscription.create({ userId: first.userId, serviceKey: 'private.example', serviceName: 'Private Service', primaryDomain: 'private.example', confidenceLevel: 'POSSIBLE', confidenceScore: 35, evidenceCount: 1, firstSeenAt: new Date(), lastSeenAt: new Date() }),
+      Subscription.create({ userId: first.userId, serviceKey: 'private.example', serviceName: 'Private Service', primaryDomain: 'private.example', confidenceLevel: 'POSSIBLE', confidenceScore: 35, evidenceCount: 2, firstSeenAt: new Date(), lastSeenAt: new Date() }),
+      MicrosoftSubscription.create({ userId: second.userId, serviceKey: 'other.example', serviceName: 'Other Service', primaryDomain: 'other.example', confidenceLevel: 'POSSIBLE', confidenceScore: 35, evidenceCount: 1, firstSeenAt: new Date(), lastSeenAt: new Date() }),
+    ])
+
+    const connection = await first.agent.get('/api/microsoft/connection').expect(200)
+    expect(connection.body.microsoft.connection).toMatchObject({ email: 'microsoft-api-first@example.com', status: 'CONNECTED' })
+    expect(JSON.stringify(connection.body)).not.toContain('private-access-token')
+    expect(JSON.stringify(connection.body)).not.toContain('private-refresh-token')
+    expect(connection.body.microsoft.connection).not.toHaveProperty('microsoftAccountId')
+
+    const subscriptions = await first.agent.get('/api/microsoft/subscriptions?page=1&limit=1').expect(200)
+    expect(subscriptions.body.pagination).toEqual({ page: 1, limit: 1, total: 1, totalPages: 1 })
+    expect(subscriptions.body.subscriptions[0].serviceName).toBe('Private Service')
+    expect(JSON.stringify(subscriptions.body)).not.toContain('Other Service')
+    await first.agent.get('/api/microsoft/subscriptions?limit=51').expect(400)
+    await first.agent.get('/api/microsoft/subscriptions?unexpected=value').expect(400)
+
+    const unifiedSubscriptions = await first.agent.get('/api/subscriptions?page=1&limit=12').expect(200)
+    expect(unifiedSubscriptions.body.pagination).toMatchObject({ total: 1 })
+    expect(unifiedSubscriptions.body.subscriptions).toMatchObject([
+      { serviceName: 'Private Service', source: 'MULTI_PROVIDER_METADATA', evidenceCount: 3 },
+    ])
+  })
+
+  it('completes session-bound OAuth and records Microsoft as a connected provider', async () => {
+    const first = await register('microsoft-oauth@example.com')
+    const start = await first.agent.get('/api/microsoft/oauth/start').expect(302)
+    const authorizationUrl = new URL(start.headers.location)
+    const state = authorizationUrl.searchParams.get('state')
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'access-token', refresh_token: 'refresh-token', expires_in: 3600, scope: 'openid profile email offline_access User.Read Mail.ReadBasic' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'microsoft-account', mail: 'microsoft-oauth@example.com' }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const callback = await first.agent.get(`/api/microsoft/oauth/callback?code=oauth-code&state=${encodeURIComponent(state)}`).expect(302)
+    expect(callback.headers.location).toBe('http://localhost:5173/connect/microsoft?microsoft=connected')
+    expect((await User.findById(first.userId)).authProviders).toContain('microsoft')
+    expect(await MicrosoftConnection.countDocuments({ userId: first.userId })).toBe(1)
+  })
+
+  it('atomically rejects a second active sync start and stores one metadata batch', async () => {
+    const first = await register('microsoft-sync@example.com')
+    await MicrosoftConnection.create({
+      userId: first.userId, microsoftAccountId: 'microsoft-sync-account', email: 'microsoft-sync@example.com',
+      encryptedAccessToken: encryptSecret('private-access-token'), encryptedRefreshToken: encryptSecret('private-refresh-token'),
+      scopes: ['Mail.ReadBasic'], tokenExpiresAt: new Date(Date.now() + 3_600_000),
+    })
+    const starts = await Promise.all([
+      first.agent.post('/api/microsoft/sync'),
+      first.agent.post('/api/microsoft/sync'),
+    ])
+    expect(starts.map((response) => response.status).sort()).toEqual([202, 409])
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      value: [{
+        id: 'provider-message', conversationId: 'provider-thread',
+        from: { emailAddress: { address: 'billing@example.com' } },
+        receivedDateTime: '2026-08-01T00:00:00Z', subject: 'Monthly payment receipt USD 12.99',
+      }],
+    }), { status: 200 })))
+    const batch = await first.agent.post('/api/microsoft/sync/next').expect(200)
+    expect(batch.body.sync).toMatchObject({ processedCount: 1, storedCount: 1, status: 'COMPLETED' })
+    expect(await MicrosoftSignal.countDocuments({ userId: first.userId })).toBe(1)
+    expect(await Account.countDocuments({ userId: first.userId })).toBe(1)
+    expect(await AccountEvidence.countDocuments({ userId: first.userId })).toBe(1)
+    expect(await MicrosoftSyncJob.countDocuments({ userId: first.userId })).toBe(1)
+  })
+})

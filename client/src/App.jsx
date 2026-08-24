@@ -8,6 +8,7 @@ import ProtectedRoute from './features/auth/ProtectedRoute.jsx'
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute.jsx'
 import RegisterPage from './features/auth/RegisterPage.jsx'
 import GmailConnectionPage from './features/google/GmailConnectionPage.jsx'
+import MicrosoftConnectionPage from './features/microsoft/MicrosoftConnectionPage.jsx'
 import IdentityPage from './features/identity/IdentityPage.jsx'
 import LandingPage from './features/landing/LandingPage.jsx'
 import LegalPage from './features/legal/LegalPage.jsx'
@@ -38,6 +39,7 @@ function App() {
         path="/connect/gmail"
         element={<ProtectedRoute><GmailConnectionPage /></ProtectedRoute>}
       />
+      <Route path="/connect/microsoft" element={<ProtectedRoute><MicrosoftConnectionPage /></ProtectedRoute>} />
       <Route path="/accounts" element={<ProtectedRoute><AccountsPage /></ProtectedRoute>} />
       <Route
         path="/accounts/:id"

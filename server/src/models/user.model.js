@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema(
     },
     authProviders: {
       type: [String],
-      enum: ['password', 'google'],
+      enum: ['password', 'google', 'microsoft'],
       default: ['password'],
     },
     emailVerified: {

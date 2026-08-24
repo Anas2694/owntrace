@@ -21,7 +21,7 @@ function SubscriptionsPage() {
 
   return (
     <PrivacyPageLayout
-      description="Explainable recurring-service detections derived from minimized Gmail sender, subject, and date metadata. OwnTrace never reads message bodies."
+      description="Explainable recurring-service detections derived from minimized Gmail or Microsoft sender, subject, and date metadata. OwnTrace never reads message bodies."
       eyebrow="Subscriptions"
       title="Recurring services, without pretending certainty."
     >
@@ -37,7 +37,7 @@ function SubscriptionsPage() {
                 <div>
                   <strong>{subscription.serviceName}</strong>
                   <p>{subscription.primaryDomain} · Last evidence {formatDate(subscription.lastSeenAt)}</p>
-                  <small>Basis: {subscription.basis.map(formatEnum).join(', ')}</small>
+                  <small>Source: {subscription.source === 'MICROSOFT_METADATA' ? 'Microsoft metadata' : 'Gmail metadata'} · Basis: {subscription.basis.map(formatEnum).join(', ')}</small>
                   <dl className="privacy-subscription-facts">
                     <div><dt>Amount</dt><dd>{formatMoney(subscription.amountMinor, subscription.currency)}</dd></div>
                     <div><dt>Billing cycle</dt><dd>{formatEnum(subscription.billingCycle)}</dd></div>
@@ -51,7 +51,7 @@ function SubscriptionsPage() {
           </ul>
           <Pagination label="Subscription signal pages" onPageChange={setPage} pagination={result.pagination} />
         </section>
-      ) : result ? <EmptyState title="No recurring services detected">A service appears here only when minimized metadata contains non-marketing subscription or payment evidence.</EmptyState> : null}
+      ) : result ? <EmptyState title="No recurring services detected">A service appears here only when minimized Gmail or Microsoft metadata contains non-marketing subscription or payment evidence.</EmptyState> : null}
     </PrivacyPageLayout>
   )
 }
