@@ -1,7 +1,7 @@
 import { SESSION_COOKIE_NAME } from '../config/auth.js'
 import User from '../models/user.model.js'
 import AppError from '../utils/app-error.js'
-import { verifySessionToken } from '../utils/session.js'
+import { verifyActiveSession } from '../services/session.service.js'
 
 async function requireAuth(request, _response, next) {
   const token = request.cookies?.[SESSION_COOKIE_NAME]
@@ -13,7 +13,7 @@ async function requireAuth(request, _response, next) {
   let payload
 
   try {
-    payload = verifySessionToken(token)
+    payload = await verifyActiveSession(token)
   } catch {
     return next(new AppError('Your session is invalid or has expired.', 401, 'INVALID_SESSION'))
   }

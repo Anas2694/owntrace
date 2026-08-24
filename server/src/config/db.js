@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { logEvent } from '../utils/logger.js'
 
 async function connectDatabase() {
   const mongoUri = process.env.MONGO_URI?.trim()
@@ -8,7 +9,7 @@ async function connectDatabase() {
   }
 
   await mongoose.connect(mongoUri)
-  console.log('MongoDB connected')
+  logEvent('info', 'database_connected')
 }
 
 export default connectDatabase

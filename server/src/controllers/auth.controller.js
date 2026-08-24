@@ -7,11 +7,10 @@ import {
 } from '../services/auth.service.js'
 import { SESSION_COOKIE_NAME } from '../config/auth.js'
 import AppError from '../utils/app-error.js'
+import { issueSession, revokeSession, verifyActiveSession } from '../services/session.service.js'
 import {
   clearSessionCookie,
-  createSessionToken,
   setSessionCookie,
-  verifySessionToken,
 } from '../utils/session.js'
 import {
   validateAccountDeletionInput,
@@ -30,7 +29,7 @@ async function register(request, response) {
   throwValidationError(errors)
 
   const user = await registerUser(data)
-  setSessionCookie(response, createSessionToken(user.id))
+  setSessionCookie(response, await issueSession(user.id))
 
   response.status(201).json({ success: true, user: serializeUser(user) })
 }
@@ -40,12 +39,13 @@ async function login(request, response) {
   throwValidationError(errors)
 
   const user = await authenticateUser(data)
-  setSessionCookie(response, createSessionToken(user.id))
+  setSessionCookie(response, await issueSession(user.id))
 
   response.status(200).json({ success: true, user: serializeUser(user) })
 }
 
-function logout(_request, response) {
+async function logout(request, response) {
+  await revokeSession(request.cookies?.[SESSION_COOKIE_NAME])
   clearSessionCookie(response)
   response.status(200).json({ success: true, message: 'Signed out successfully.' })
 }
@@ -78,7 +78,7 @@ async function session(request, response) {
   let payload
 
   try {
-    payload = verifySessionToken(token)
+    payload = await verifyActiveSession(token)
   } catch {
     clearSessionCookie(response)
     response.status(200).json({ success: true, user: null })

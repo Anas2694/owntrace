@@ -47,6 +47,8 @@ Run the backend authentication tests with an isolated in-memory MongoDB instance
 npm test
 ```
 
+Production configuration, deployment, operations, rollback, and release blockers are documented in [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md), [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md), and [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md). The current verdict is not a public-production approval.
+
 ## Team
 
 - [Anas2694](https://github.com/Anas2694)

@@ -125,6 +125,7 @@ function PrivacyWorkspace({ children, title }) {
       ) : null}
       <aside
         aria-label="OwnTrace product navigation"
+        aria-hidden={isMobile && !isOpen ? 'true' : undefined}
         aria-modal={isMobile && isOpen ? 'true' : undefined}
         className={`privacy-sidebar${isOpen ? ' is-open' : ''}`}
         id="owntrace-privacy-sidebar"

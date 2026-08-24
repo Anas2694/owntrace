@@ -1,5 +1,7 @@
 # OwnTrace website MVP security review
 
+> Historical integration review. The current release-delivery audit and finding status are maintained in the repository-root [`SECURITY_REVIEW.md`](../SECURITY_REVIEW.md).
+
 Review date: 2026-08-21
 
 Review branch: `anas/raphael-mvp-integration`
