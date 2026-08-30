@@ -6,10 +6,15 @@ import Account from '../models/account.model.js'
 import GmailSignal from '../models/gmail-signal.model.js'
 import GmailSyncJob from '../models/gmail-sync-job.model.js'
 import GoogleConnection from '../models/google-connection.model.js'
+import MicrosoftConnection from '../models/microsoft-connection.model.js'
+import MicrosoftSignal from '../models/microsoft-signal.model.js'
+import MicrosoftSubscription from '../models/microsoft-subscription.model.js'
+import MicrosoftSyncJob from '../models/microsoft-sync-job.model.js'
 import Session from '../models/session.model.js'
 import User from '../models/user.model.js'
 import AppError from '../utils/app-error.js'
 import { revokeGoogleAccessForUser } from './google-oauth.service.js'
+import { disconnectMicrosoft } from './microsoft-oauth.service.js'
 import { deleteRaphaelOwnedDataForUser } from './raphael-data.service.js'
 
 const DUMMY_PASSWORD_HASH = '$2b$12$OnbP9kWdyUNUxvOW.s950OcEToRQb8xqltZWIdmkSeXsYPip5BlS6'
@@ -81,6 +86,13 @@ async function deleteUserAccount(userId, password) {
     providerRevocation = 'FAILED'
   }
 
+  try {
+    await disconnectMicrosoft(userId)
+  } catch {
+    // Local account deletion must not be blocked by a partial Microsoft cleanup.
+    // The provider-owned data is removed again by the final local deletion phase.
+  }
+
   await Promise.all([
     AccountAction.deleteMany({ userId }),
     AccountEvidence.deleteMany({ userId }),
@@ -88,6 +100,10 @@ async function deleteUserAccount(userId, password) {
     GmailSignal.deleteMany({ userId }),
     GmailSyncJob.deleteMany({ userId }),
     GoogleConnection.deleteMany({ userId }),
+    MicrosoftConnection.deleteMany({ userId }),
+    MicrosoftSignal.deleteMany({ userId }),
+    MicrosoftSubscription.deleteMany({ userId }),
+    MicrosoftSyncJob.deleteMany({ userId }),
     Session.deleteMany({ userId }),
     deleteRaphaelOwnedDataForUser(userId),
   ])

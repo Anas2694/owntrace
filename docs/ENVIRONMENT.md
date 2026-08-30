@@ -19,6 +19,11 @@ OwnTrace reads server variables from the runtime environment. Local development 
 | `GOOGLE_REDIRECT_URI` | Production | No | Exact HTTPS callback ending in `/api/google/oauth/callback`; must match Google Cloud configuration. | Google Cloud owner |
 | `TOKEN_ENCRYPTION_KEY` | Production Gmail | Yes | Base64 encoding of exactly 32 random bytes for AES-256-GCM provider-token encryption. Rotation currently requires a planned reconnect of affected Google accounts. | Security owner |
 | `GMAIL_SYNC_MESSAGE_LIMIT` | No | No | Maximum messages per scan, default `2000`, bounded internally. | Product/operations owner |
+| `MICROSOFT_CLIENT_ID` | Microsoft OAuth | No | Microsoft Entra application client ID for the current environment. | Microsoft integration owner |
+| `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth | Yes | Microsoft Entra application secret. Never expose it to the browser. | Microsoft integration owner |
+| `MICROSOFT_REDIRECT_URI` | Microsoft OAuth | No | Exact callback ending in `/api/microsoft/oauth/callback`; must match the Entra registration. | Microsoft integration owner |
+| `MICROSOFT_TENANT` | No | No | Entra tenant identifier; defaults to `common` for personal/work accounts. | Microsoft integration owner |
+| `MICROSOFT_SYNC_MESSAGE_LIMIT` | No | No | Maximum Inbox metadata messages per manual scan, default `2000`, bounded internally. | Product/operations owner |
 | `VITE_API_BASE_URL` | Separate frontend only | No | Client build-time API base. Leave unset for the recommended single-origin container. | Deployment owner |
 
 Generate secrets locally without printing them into shared logs:

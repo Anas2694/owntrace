@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "migrate:account-evidence-indexes": "node scripts/migrate-account-evidence-indexes.mjs",
     "smoke:production": "node scripts/smoke-production.mjs",
     "serve:test-production": "node scripts/smoke-production.mjs --serve",
     "test": "vitest run"

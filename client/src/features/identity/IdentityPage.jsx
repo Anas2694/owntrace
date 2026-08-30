@@ -57,7 +57,7 @@ function IdentityPage() {
 
     graph.nodes.forEach((node) => {
       if (node.type === 'PROFILE') groups.profile = node
-      if (node.type === 'EMAIL_IDENTITY' || node.type === 'GOOGLE_IDENTITY') {
+      if (['EMAIL_IDENTITY', 'GOOGLE_IDENTITY', 'MICROSOFT_IDENTITY'].includes(node.type)) {
         groups.identities.push(node)
       }
       if (node.type === 'ACCOUNT') groups.accounts.push(node)
@@ -181,8 +181,8 @@ function IdentityPage() {
                 ) : (
                   <div className="identity-empty-accounts">
                     <strong>No discovered account relationships yet</strong>
-                    <p>A completed Gmail metadata scan can add evidence-based account and service nodes.</p>
-                    <Link to="/connect/gmail">Review Gmail connection</Link>
+                    <p>A completed mail metadata scan can add evidence-based account and service nodes.</p>
+                    <Link to="/connect">Review mail connections</Link>
                   </div>
                 )}
               </div>

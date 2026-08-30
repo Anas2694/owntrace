@@ -1,5 +1,6 @@
 import { getAllowedOrigins, getJwtSecret } from './auth.js'
 import { getGoogleClientUrl, getGoogleConfig, getTokenEncryptionKey } from './google.js'
+import { getMicrosoftConfig, hasMicrosoftConfiguration } from './microsoft.js'
 
 const validNodeEnvironments = new Set(['development', 'production', 'test'])
 const validLogLevels = new Set(['error', 'info', 'silent'])
@@ -72,6 +73,7 @@ function validateRuntimeEnvironment() {
   requireValue('MONGO_URI')
   parseInteger('BCRYPT_ROUNDS', 12, { maximum: 14, minimum: 10 })
   parseInteger('GMAIL_SYNC_MESSAGE_LIMIT', 2_000, { maximum: 20_000, minimum: 25 })
+  parseInteger('MICROSOFT_SYNC_MESSAGE_LIMIT', 2_000, { maximum: 20_000, minimum: 25 })
 
   if (runtime.nodeEnvironment === 'production') {
     if (runtime.trustProxy === true) {
@@ -87,6 +89,13 @@ function validateRuntimeEnvironment() {
       throw new Error('GOOGLE_REDIRECT_URI must end at /api/google/oauth/callback')
     }
     getTokenEncryptionKey()
+    if (hasMicrosoftConfiguration()) {
+      const { redirectUri: microsoftRedirectUri } = getMicrosoftConfig()
+      const parsedMicrosoftRedirect = requireHttpsUrl('MICROSOFT_REDIRECT_URI', microsoftRedirectUri)
+      if (parsedMicrosoftRedirect.pathname !== '/api/microsoft/oauth/callback') {
+        throw new Error('MICROSOFT_REDIRECT_URI must end at /api/microsoft/oauth/callback')
+      }
+    }
   }
 
   return runtime

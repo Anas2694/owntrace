@@ -30,7 +30,7 @@ function WorkspaceHeader() {
         <NavLink to="/identity">Identity</NavLink>
         <NavLink to="/account-actions">Actions</NavLink>
         <NavLink to="/privacy-inbox">Privacy Inbox</NavLink>
-        <NavLink to="/connect/gmail">Gmail</NavLink>
+        <NavLink to="/connect">Connections</NavLink>
         <NavLink to="/settings">Settings</NavLink>
       </nav>
       <button type="button" onClick={handleLogout} disabled={isSigningOut}>

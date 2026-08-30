@@ -1,6 +1,8 @@
 import Account from '../models/account.model.js'
+import mongoose from 'mongoose'
 import BreachReport from '../models/breach-report.model.js'
 import Subscription from '../models/subscription.model.js'
+import MicrosoftSubscription from '../models/microsoft-subscription.model.js'
 import { getAccountActionSummary } from './account-action.service.js'
 import { getAccountSummary } from './account.service.js'
 import { getBreachReportForUser, serializeBreachReport } from './breach-report.service.js'
@@ -69,17 +71,123 @@ function parseBreachPagination(rawQuery = {}) {
 
 async function listSubscriptions(userId, rawQuery = {}) {
   const { limit, page } = parseBoundedPagination(rawQuery)
-  const filter = { userId }
-  const [subscriptions, total] = await Promise.all([
-    Subscription.find(filter)
-      .sort({ lastSeenAt: -1, _id: 1 })
-      .skip((page - 1) * limit)
-      .limit(limit),
-    Subscription.countDocuments(filter),
+  const scopedUserId = new mongoose.Types.ObjectId(userId)
+  const safeSubscriptionFields = {
+    amountMinor: 1,
+    basis: 1,
+    billingCycle: 1,
+    confidenceLevel: 1,
+    confidenceScore: 1,
+    currency: 1,
+    evidenceCount: 1,
+    firstSeenAt: 1,
+    lastPaymentAt: 1,
+    lastSeenAt: 1,
+    nextRenewalAt: 1,
+    primaryDomain: 1,
+    renewalIsEstimated: 1,
+    serviceKey: 1,
+    serviceName: 1,
+    source: { $ifNull: ['$source', 'GMAIL_METADATA'] },
+  }
+  const [result] = await Subscription.aggregate([
+    { $match: { userId: scopedUserId } },
+    { $project: safeSubscriptionFields },
+    {
+      $unionWith: {
+        coll: MicrosoftSubscription.collection.name,
+        pipeline: [
+          { $match: { userId: scopedUserId } },
+          { $project: safeSubscriptionFields },
+        ],
+      },
+    },
+    { $sort: { lastSeenAt: -1, _id: 1 } },
+    {
+      $group: {
+        _id: '$serviceKey',
+        latest: { $first: '$$ROOT' },
+        basisSets: { $push: '$basis' },
+        evidenceCount: { $sum: '$evidenceCount' },
+        firstSeenAt: { $min: '$firstSeenAt' },
+        lastPaymentAt: { $max: '$lastPaymentAt' },
+        lastSeenAt: { $max: '$lastSeenAt' },
+        records: { $push: '$$ROOT' },
+        sources: { $addToSet: '$source' },
+      },
+    },
+    {
+      $set: {
+        'latest.basis': {
+          $reduce: {
+            input: '$basisSets',
+            initialValue: [],
+            in: { $setUnion: ['$$value', '$$this'] },
+          },
+        },
+        'latest.evidenceCount': '$evidenceCount',
+        'latest.firstSeenAt': '$firstSeenAt',
+        'latest.lastPaymentAt': '$lastPaymentAt',
+        'latest.lastSeenAt': '$lastSeenAt',
+        'latest.source': {
+          $cond: [{ $gt: [{ $size: '$sources' }, 1] }, 'MULTI_PROVIDER_METADATA', { $arrayElemAt: ['$sources', 0] }],
+        },
+        amountRecord: {
+          $arrayElemAt: [{ $filter: { input: '$records', as: 'record', cond: { $gt: ['$$record.amountMinor', 0] } } }, 0],
+        },
+        cycleRecord: {
+          $arrayElemAt: [{ $filter: { input: '$records', as: 'record', cond: { $and: [{ $ne: ['$$record.billingCycle', null] }, { $ne: ['$$record.billingCycle', 'UNKNOWN'] }] } } }, 0],
+        },
+      },
+    },
+    {
+      $set: {
+        'latest.amountMinor': { $ifNull: ['$amountRecord.amountMinor', null] },
+        'latest.currency': { $ifNull: ['$amountRecord.currency', null] },
+        'latest.billingCycle': { $ifNull: ['$cycleRecord.billingCycle', 'UNKNOWN'] },
+        'latest.nextRenewalAt': { $ifNull: ['$cycleRecord.nextRenewalAt', null] },
+        'latest.renewalIsEstimated': { $ifNull: ['$cycleRecord.renewalIsEstimated', false] },
+      },
+    },
+    {
+      $set: {
+        'latest.confidenceScore': {
+          $min: [95, {
+            $add: [
+              { $cond: [{ $in: ['PAYMENT', '$latest.basis'] }, 35, 0] },
+              { $cond: [{ $in: ['SUBSCRIPTION', '$latest.basis'] }, 30, 0] },
+              { $min: [20, { $multiply: [{ $max: [0, { $subtract: ['$evidenceCount', 1] }] }, 10] }] },
+              { $cond: [{ $gt: ['$latest.amountMinor', 0] }, 10, 0] },
+              { $cond: [{ $and: [{ $ne: ['$latest.billingCycle', null] }, { $ne: ['$latest.billingCycle', 'UNKNOWN'] }] }, 10, 0] },
+              { $cond: [{ $eq: [{ $size: '$latest.basis' }, 2] }, 10, 0] },
+            ],
+          }],
+        },
+      },
+    },
+    {
+      $set: {
+        'latest.confidenceLevel': { $cond: [{ $gte: ['$latest.confidenceScore', 75] }, 'LIKELY', 'POSSIBLE'] },
+      },
+    },
+    { $replaceRoot: { newRoot: '$latest' } },
+    { $sort: { lastSeenAt: -1, _id: 1 } },
+    {
+      $facet: {
+        subscriptions: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+        total: [{ $count: 'count' }],
+      },
+    },
   ])
+  const total = result?.total[0]?.count || 0
+  const subscriptions = (result?.subscriptions || []).map((subscription) => ({
+    ...subscription,
+    id: subscription._id.toString(),
+    _id: undefined,
+  }))
   return {
     pagination: paginationFor({ limit, page, total }),
-    subscriptions: subscriptions.map((subscription) => subscription.toJSON()),
+    subscriptions,
   }
 }
 

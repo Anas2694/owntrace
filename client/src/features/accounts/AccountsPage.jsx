@@ -212,7 +212,7 @@ function AccountsPage() {
               <p>
                 {hasFilters
                   ? 'Adjust the search or filters to see more of your account inventory.'
-                  : 'Connect Gmail and complete a metadata scan to build your evidence-based inventory.'}
+                  : 'Connect a supported mail source and complete a metadata scan to build your evidence-based inventory.'}
               </p>
               {hasFilters ? (
                 <button type="button" onClick={() => {
@@ -221,7 +221,7 @@ function AccountsPage() {
                   setDormant('')
                   setPage(1)
                 }}>Clear filters</button>
-              ) : <Link to="/connect/gmail">Go to Gmail connection</Link>}
+              ) : <Link to="/connect">Go to mail connections</Link>}
             </div>
           )}
 
