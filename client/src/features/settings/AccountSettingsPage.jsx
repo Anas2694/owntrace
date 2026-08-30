@@ -68,7 +68,7 @@ function AccountSettingsPage() {
             <h2 id="delete-account-title">Delete your OwnTrace account</h2>
             <p>
               OwnTrace will attempt to revoke its Google access, then permanently remove your
-              profile and all Anas-owned workspace data. This does not delete accounts or data
+              profile and all of your OwnTrace workspace data. This does not delete accounts or data
               held by Google or other services.
             </p>
           </div>
