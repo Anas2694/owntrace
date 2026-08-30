@@ -41,6 +41,15 @@ npm run dev:server
 - Client: `http://localhost:5173`
 - API health: `http://localhost:5000/api/health`
 
+### Windows MongoDB DNS troubleshooting
+
+If the server reports `querySrv ECONNREFUSED` for a `mongodb+srv://` connection and
+`node -e "console.log(require('node:dns').getServers())"` prints `127.0.0.1`, use
+Node.js `22.21.1` for local Windows development. A [Node.js/c-ares regression](https://github.com/nodejs/node/issues/62326) in affected
+later Windows builds can select the loopback resolver even when Windows DNS is configured
+correctly. Also confirm that MongoDB Atlas **Network Access** contains only the current
+developer IP; do not solve local access by allowing `0.0.0.0/0`.
+
 Run the backend authentication tests with an isolated in-memory MongoDB instance:
 
 ```bash

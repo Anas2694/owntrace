@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import AuthLayout from './AuthLayout.jsx'
 import { getRequestErrors } from './auth-errors.js'
+import { getPostLoginRoute } from './auth-navigation.js'
 import useAuth from './useAuth.js'
 import './auth.css'
 
@@ -29,8 +30,8 @@ function LoginPage() {
     setFormError('')
 
     try {
-      await login(values)
-      const destination = typeof location.state?.from === 'string' ? location.state.from : '/onboarding'
+      const user = await login(values)
+      const destination = getPostLoginRoute(user, location.state?.from)
       navigate(destination, { replace: true })
     } catch (error) {
       const requestErrors = getRequestErrors(error)

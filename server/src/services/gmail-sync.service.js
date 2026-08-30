@@ -25,6 +25,10 @@ function getMessageLimit() {
     : DEFAULT_MESSAGE_LIMIT
 }
 
+function getSyncPolicy() {
+  return { batchSize: BATCH_SIZE, messageLimit: getMessageLimit() }
+}
+
 function hashProviderId(userId, value) {
   return crypto
     .createHmac('sha256', getTokenEncryptionKey())
@@ -367,6 +371,7 @@ export {
   cancelSync,
   deriveSignal,
   deriveSubjectSignal,
+  getSyncPolicy,
   getSyncJob,
   parseSender,
   processNextBatch,
