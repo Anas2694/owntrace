@@ -1,16 +1,14 @@
 function getDefaultAuthenticatedRoute(user) {
   if (user?.onboardingStatus === 'COMPLETED') return '/dashboard'
-  if (['GMAIL_PENDING', 'SCAN_PENDING'].includes(user?.onboardingStatus)) return '/connect/gmail'
+  if (['GMAIL_PENDING', 'SCAN_PENDING'].includes(user?.onboardingStatus)) return '/connect'
   return '/onboarding'
 }
 
 function canAccessAuthenticatedRoute(user, pathname) {
   if (user?.onboardingStatus === 'COMPLETED') return true
   if (pathname === '/onboarding') return true
-  return (
-    pathname === '/connect/gmail'
+  return ['/connect', '/connect/gmail', '/connect/microsoft'].includes(pathname)
     && ['GMAIL_PENDING', 'SCAN_PENDING'].includes(user?.onboardingStatus)
-  )
 }
 
 function getPostLoginRoute(user, requestedPath) {

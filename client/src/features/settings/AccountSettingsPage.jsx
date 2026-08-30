@@ -57,8 +57,8 @@ function AccountSettingsPage() {
           </div>
           <ul>
             <li>OwnTrace profile and password hash</li>
-            <li>Encrypted Google connection credentials, when connected</li>
-            <li>Minimized Gmail signals, derived account evidence, accounts, and actions</li>
+            <li>Encrypted Google or Microsoft connection credentials, when connected</li>
+            <li>Minimized mail signals, derived account evidence, accounts, and actions</li>
           </ul>
         </section>
 
@@ -67,9 +67,9 @@ function AccountSettingsPage() {
             <p className="settings-eyebrow">Permanent action</p>
             <h2 id="delete-account-title">Delete your OwnTrace account</h2>
             <p>
-              OwnTrace will attempt to revoke its Google access, then permanently remove your
+              OwnTrace will attempt to revoke its connected provider access, then permanently remove your
               profile and all of your OwnTrace workspace data. This does not delete accounts or data
-              held by Google or other services.
+              held by Google, Microsoft, or other services.
             </p>
           </div>
 
@@ -108,8 +108,8 @@ function AccountSettingsPage() {
           </form>
 
           <p className="settings-provider-note">
-            If Google cannot confirm revocation, OwnTrace still removes its local copy and tells
-            you to review access directly in your Google Account.
+            If a provider cannot confirm revocation, OwnTrace still removes its local copy. Review
+            connected-app access directly with Google or Microsoft when prompted.
           </p>
         </section>
       </div>

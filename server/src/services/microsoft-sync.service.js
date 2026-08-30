@@ -28,6 +28,10 @@ function getMessageLimit() {
     : DEFAULT_MESSAGE_LIMIT
 }
 
+function getSyncPolicy() {
+  return { batchSize: BATCH_SIZE, messageLimit: getMessageLimit() }
+}
+
 function hashProviderId(userId, value) {
   return crypto.createHmac('sha256', getTokenEncryptionKey()).update(`${userId}:${value}`).digest('base64url')
 }
@@ -176,7 +180,7 @@ async function processNextBatch(userId) {
         if (!activeLease || !activeConnection) return getSyncJob(userId)
         const result = await MicrosoftSignal.bulkWrite(signals.map((signal) => ({ updateOne: {
           filter: { connectionId: signal.connectionId, messageIdHash: signal.messageIdHash, userId },
-          update: { $set: { billingAmountMinor: signal.billingAmountMinor, billingCurrency: signal.billingCurrency, billingCycle: signal.billingCycle, occurredAt: signal.occurredAt, senderDomain: signal.senderDomain, senderEmail: signal.senderEmail, subjectSignal: signal.subjectSignal, syncRunId: job.runId }, $setOnInsert: { connectionId: signal.connectionId, messageIdHash: signal.messageIdHash, threadIdHash: signal.threadIdHash, userId } }, upsert: true,
+          update: { $set: { billingAmountMinor: signal.billingAmountMinor, billingCurrency: signal.billingCurrency, billingCycle: signal.billingCycle, occurredAt: signal.occurredAt, senderDomain: signal.senderDomain, senderEmail: signal.senderEmail, subjectSignal: signal.subjectSignal }, $setOnInsert: { connectionId: signal.connectionId, messageIdHash: signal.messageIdHash, syncRunId: job.runId, threadIdHash: signal.threadIdHash, userId } }, upsert: true,
         } })), { ordered: false })
         storedCount = result.upsertedCount
       }
@@ -191,7 +195,13 @@ async function processNextBatch(userId) {
         { $inc: { processedCount: messages.length, storedCount }, $set: { completedAt: completed ? new Date() : null, lastErrorCode, nextPageLink, status: completed ? 'COMPLETED' : 'QUEUED' } },
         { returnDocument: 'after', runValidators: true },
       )
-      if (!updated) return getSyncJob(userId)
+      if (!updated) {
+        const currentState = await MicrosoftSyncJob.findById(job.id).select('+runId')
+        if (currentState?.status === 'CANCELLED' && currentState.runId === job.runId) {
+          await MicrosoftSignal.deleteMany({ userId, connectionId: job.connectionId, syncRunId: job.runId })
+        }
+        return getSyncJob(userId)
+      }
       if (completed) await MicrosoftConnection.updateOne({ _id: connection.id, userId, status: 'SYNCING' }, { $set: { lastErrorCode, lastSyncAt: new Date(), status: 'CONNECTED' } })
       return updated
     })
@@ -206,6 +216,11 @@ async function processNextBatch(userId) {
       if (error.code === 'MICROSOFT_RECONNECT_REQUIRED') await MicrosoftConnection.updateOne({ _id: job.connectionId, userId, status: 'SYNCING' }, { $set: { lastErrorCode: error.code, status: 'NEEDS_RECONNECT' } })
       else await MicrosoftConnection.updateOne({ _id: job.connectionId, userId, status: 'SYNCING' }, { $set: { lastErrorCode: error.code || 'MICROSOFT_SYNC_FAILED', status: 'ERROR' } })
       await MicrosoftSyncJob.updateOne({ _id: job.id, userId, runId: job.runId, leaseId, status: { $in: ['SCANNING', 'PROCESSING'] } }, { $set: { lastErrorCode: error.code || 'MICROSOFT_SYNC_FAILED', status: 'FAILED' } })
+    } else {
+      const currentState = await MicrosoftSyncJob.findById(job.id).select('+runId')
+      if (currentState?.status === 'CANCELLED' && currentState.runId === job.runId) {
+        await MicrosoftSignal.deleteMany({ userId, connectionId: job.connectionId, syncRunId: job.runId })
+      }
     }
     throw error
   } finally {
@@ -218,7 +233,7 @@ async function cancelSync(userId) {
   const job = await MicrosoftSyncJob.findOneAndUpdate(
     { userId, status: { $in: ['QUEUED', 'SCANNING', 'PROCESSING'] } },
     { $set: { cancelRequestedAt: new Date(), completedAt: new Date(), leaseId: crypto.randomUUID(), nextPageLink: null, status: 'CANCELLED' } }, { returnDocument: 'after' },
-  )
+  ).select('+runId')
   if (job) await MicrosoftConnection.updateOne({ _id: job.connectionId, userId, status: 'SYNCING' }, { $set: { lastErrorCode: null, status: 'CONNECTED' } })
   return job
 }
@@ -233,4 +248,4 @@ async function cancelAndWaitForSync(userId) {
   return job
 }
 
-export { cancelAndWaitForSync, cancelSync, deriveSignal, getGraphPageUrl, getSyncJob, processNextBatch, readBoundedJson, startSync }
+export { cancelAndWaitForSync, cancelSync, deriveSignal, getGraphPageUrl, getSyncJob, getSyncPolicy, processNextBatch, readBoundedJson, startSync }

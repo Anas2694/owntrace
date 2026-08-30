@@ -83,7 +83,7 @@ function OnboardingPage() {
           await api.patch('/onboarding', { status: 'GMAIL_PENDING' })
           await restoreSession({ showLoading: false })
         }
-        navigate('/connect/gmail', { replace: true })
+        navigate('/connect', { replace: true })
       }
     } catch (requestError) {
       setError(
@@ -135,7 +135,7 @@ function OnboardingPage() {
               {isSaving
                 ? 'Saving…'
                 : isReviewingCompletedSetup && stepIndex === steps.length - 1
-                  ? 'Return to Gmail connection'
+                  ? 'Return to mail connections'
                   : step.action}
             </button>
           </div>

@@ -3,6 +3,12 @@ import api from '../../services/api.js'
 import PrivacyPageLayout, { EmptyState, ErrorState, LoadingState, Pagination, StatusPill } from './PrivacyPageLayout.jsx'
 import { formatDate, formatEnum, formatMoney } from './privacy-format.js'
 
+const sourceLabels = {
+  GMAIL_METADATA: 'Gmail metadata',
+  MICROSOFT_METADATA: 'Microsoft metadata',
+  MULTI_PROVIDER_METADATA: 'Gmail and Microsoft metadata',
+}
+
 function SubscriptionsPage() {
   const [page, setPage] = useState(1)
   const [result, setResult] = useState(null)
@@ -37,7 +43,7 @@ function SubscriptionsPage() {
                 <div>
                   <strong>{subscription.serviceName}</strong>
                   <p>{subscription.primaryDomain} · Last evidence {formatDate(subscription.lastSeenAt)}</p>
-                  <small>Source: {subscription.source === 'MICROSOFT_METADATA' ? 'Microsoft metadata' : 'Gmail metadata'} · Basis: {subscription.basis.map(formatEnum).join(', ')}</small>
+                  <small>Source: {sourceLabels[subscription.source] || 'Mail metadata'} · Basis: {subscription.basis.map(formatEnum).join(', ')}</small>
                   <dl className="privacy-subscription-facts">
                     <div><dt>Amount</dt><dd>{formatMoney(subscription.amountMinor, subscription.currency)}</dd></div>
                     <div><dt>Billing cycle</dt><dd>{formatEnum(subscription.billingCycle)}</dd></div>

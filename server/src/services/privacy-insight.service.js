@@ -107,16 +107,67 @@ async function listSubscriptions(userId, rawQuery = {}) {
       $group: {
         _id: '$serviceKey',
         latest: { $first: '$$ROOT' },
+        basisSets: { $push: '$basis' },
         evidenceCount: { $sum: '$evidenceCount' },
+        firstSeenAt: { $min: '$firstSeenAt' },
+        lastPaymentAt: { $max: '$lastPaymentAt' },
+        lastSeenAt: { $max: '$lastSeenAt' },
+        records: { $push: '$$ROOT' },
         sources: { $addToSet: '$source' },
       },
     },
     {
       $set: {
+        'latest.basis': {
+          $reduce: {
+            input: '$basisSets',
+            initialValue: [],
+            in: { $setUnion: ['$$value', '$$this'] },
+          },
+        },
         'latest.evidenceCount': '$evidenceCount',
+        'latest.firstSeenAt': '$firstSeenAt',
+        'latest.lastPaymentAt': '$lastPaymentAt',
+        'latest.lastSeenAt': '$lastSeenAt',
         'latest.source': {
           $cond: [{ $gt: [{ $size: '$sources' }, 1] }, 'MULTI_PROVIDER_METADATA', { $arrayElemAt: ['$sources', 0] }],
         },
+        amountRecord: {
+          $arrayElemAt: [{ $filter: { input: '$records', as: 'record', cond: { $gt: ['$$record.amountMinor', 0] } } }, 0],
+        },
+        cycleRecord: {
+          $arrayElemAt: [{ $filter: { input: '$records', as: 'record', cond: { $and: [{ $ne: ['$$record.billingCycle', null] }, { $ne: ['$$record.billingCycle', 'UNKNOWN'] }] } } }, 0],
+        },
+      },
+    },
+    {
+      $set: {
+        'latest.amountMinor': { $ifNull: ['$amountRecord.amountMinor', null] },
+        'latest.currency': { $ifNull: ['$amountRecord.currency', null] },
+        'latest.billingCycle': { $ifNull: ['$cycleRecord.billingCycle', 'UNKNOWN'] },
+        'latest.nextRenewalAt': { $ifNull: ['$cycleRecord.nextRenewalAt', null] },
+        'latest.renewalIsEstimated': { $ifNull: ['$cycleRecord.renewalIsEstimated', false] },
+      },
+    },
+    {
+      $set: {
+        'latest.confidenceScore': {
+          $min: [95, {
+            $add: [
+              { $cond: [{ $in: ['PAYMENT', '$latest.basis'] }, 35, 0] },
+              { $cond: [{ $in: ['SUBSCRIPTION', '$latest.basis'] }, 30, 0] },
+              { $min: [20, { $multiply: [{ $max: [0, { $subtract: ['$evidenceCount', 1] }] }, 10] }] },
+              { $cond: [{ $gt: ['$latest.amountMinor', 0] }, 10, 0] },
+              { $cond: [{ $and: [{ $ne: ['$latest.billingCycle', null] }, { $ne: ['$latest.billingCycle', 'UNKNOWN'] }] }, 10, 0] },
+              { $cond: [{ $eq: [{ $size: '$latest.basis' }, 2] }, 10, 0] },
+            ],
+          }],
+        },
+      },
+    },
+    {
+      $set: {
+        'latest.confidenceLevel': { $cond: [{ $gte: ['$latest.confidenceScore', 75] }, 'LIKELY', 'POSSIBLE'] },
       },
     },
     { $replaceRoot: { newRoot: '$latest' } },

@@ -1,6 +1,6 @@
 # Microsoft/Gmail parity hardening review
 
-Status: working-tree implementation record. The changes described here are intentionally uncommitted until review.
+Status: implementation and review record for PR #20.
 
 ## Review method
 
@@ -40,8 +40,8 @@ The review was adversarial in four ways:
 
 - **How it was found:** The in-flight barrier map exists only in one Node process. A second process could cancel/delete while the first process was between its lease check and signal write.
 - **What it meant:** A cancelled scan could recreate signals after cleanup, especially after a restart or on multiple instances.
-- **Fix:** Jobs now persist cancellation time, signals carry the originating run ID, and cancellation removes signals written by the cancelled run after waiting for local barriers. Existing durable lease/run checks remain in place.
-- **Testing:** Use two service instances against the same MongoDB, cancel during a delayed batch, and assert the cancelled run leaves no signals. Repeat after worker/process restart and verify a subsequent scan can safely resume.
+- **Fix:** Jobs persist cancellation time, newly inserted signals carry the originating run ID, and cancellation selects that otherwise-hidden run ID before cleanup. Existing signals keep their original run ownership. A worker that loses its lease to cancellation also removes any late writes from its own run, covering the cross-process check/write race.
+- **Testing:** The regression suite cancels an active run and verifies its newly inserted signals are removed while signals from an earlier completed run survive. Full validation also exercises repeated metadata deduplication.
 
 ### P2 — Account evidence had a misleading Google-only reference
 
@@ -69,7 +69,7 @@ The review was adversarial in four ways:
 - **How it was found:** The page only offered “Resume” for `QUEUED`, and only showed “Cancel” while the current tab’s `isSyncing` flag was true. A reload during `SCANNING` or `PROCESSING` therefore hid recovery controls while the API correctly reported an active job.
 - **What it meant:** The user could see a scan that could neither be continued nor cancelled from the page.
 - **Fix:** The page polls active persisted statuses, exposes continuation/cancellation for all active states, and uses `Promise.allSettled` so a sync endpoint failure does not hide a successful connection response. Disconnect clears local state and reloads in `finally`.
-- **Testing:** Browser-test reloads at each active state, cancellation, stale lease recovery, mobile layout, keyboard focus, and screen-reader status announcements.
+- **Testing:** API tests cover cancellation and stale-run data retention. Browser review covers active-state controls, mobile layout, keyboard focus, and status announcements; live provider consent remains an environment-specific release check.
 
 ### P3 — Dashboard empty-state language was Gmail-specific
 

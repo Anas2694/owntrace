@@ -106,7 +106,7 @@ function DashboardPage() {
               <div className="privacy-section-heading"><div><p>Identity API</p><h2 id="dashboard-identity-title">Identity relationships</h2></div><Link to="/identity">View graph</Link></div>
               <p>{data.identity.summary.accountCount} account relationships and {data.identity.summary.serviceCount} service relationships are represented in your current graph.</p>
               {data.identity.summary.truncated ? <p className="privacy-note">The visual graph is capped; the Accounts page remains the complete inventory.</p> : null}
-              <Link className="privacy-action is-primary" to="/connect/microsoft">Review connected source</Link>
+              <Link className="privacy-action is-primary" to="/connect">Review mail connections</Link>
             </section>
 
             <section className="privacy-card is-full" aria-labelledby="dashboard-notifications-title">

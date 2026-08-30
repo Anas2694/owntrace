@@ -221,7 +221,7 @@ function AccountsPage() {
                   setDormant('')
                   setPage(1)
                 }}>Clear filters</button>
-              ) : <Link to="/connect/gmail">Go to a mail connection</Link>}
+              ) : <Link to="/connect">Go to mail connections</Link>}
             </div>
           )}
 

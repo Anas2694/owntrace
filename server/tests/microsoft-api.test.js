@@ -45,8 +45,8 @@ describe('Microsoft integration API', () => {
       scopes: ['Mail.ReadBasic'], tokenExpiresAt: new Date(Date.now() + 3_600_000),
     })
     await Promise.all([
-      MicrosoftSubscription.create({ userId: first.userId, serviceKey: 'private.example', serviceName: 'Private Service', primaryDomain: 'private.example', confidenceLevel: 'POSSIBLE', confidenceScore: 35, evidenceCount: 1, firstSeenAt: new Date(), lastSeenAt: new Date() }),
-      Subscription.create({ userId: first.userId, serviceKey: 'private.example', serviceName: 'Private Service', primaryDomain: 'private.example', confidenceLevel: 'POSSIBLE', confidenceScore: 35, evidenceCount: 2, firstSeenAt: new Date(), lastSeenAt: new Date() }),
+      MicrosoftSubscription.create({ userId: first.userId, serviceKey: 'private.example', serviceName: 'Private Service', primaryDomain: 'private.example', basis: ['SUBSCRIPTION'], confidenceLevel: 'POSSIBLE', confidenceScore: 35, evidenceCount: 1, firstSeenAt: new Date('2026-02-01'), lastSeenAt: new Date('2026-02-01') }),
+      Subscription.create({ userId: first.userId, serviceKey: 'private.example', serviceName: 'Private Service', primaryDomain: 'private.example', basis: ['PAYMENT'], billingCycle: 'MONTHLY', confidenceLevel: 'POSSIBLE', confidenceScore: 35, evidenceCount: 2, firstSeenAt: new Date('2026-01-01'), lastPaymentAt: new Date('2026-01-20'), lastSeenAt: new Date('2026-01-20') }),
       MicrosoftSubscription.create({ userId: second.userId, serviceKey: 'other.example', serviceName: 'Other Service', primaryDomain: 'other.example', confidenceLevel: 'POSSIBLE', confidenceScore: 35, evidenceCount: 1, firstSeenAt: new Date(), lastSeenAt: new Date() }),
     ])
 
@@ -66,7 +66,7 @@ describe('Microsoft integration API', () => {
     const unifiedSubscriptions = await first.agent.get('/api/subscriptions?page=1&limit=12').expect(200)
     expect(unifiedSubscriptions.body.pagination).toMatchObject({ total: 1 })
     expect(unifiedSubscriptions.body.subscriptions).toMatchObject([
-      { serviceName: 'Private Service', source: 'MULTI_PROVIDER_METADATA', evidenceCount: 3 },
+      { basis: ['PAYMENT', 'SUBSCRIPTION'], billingCycle: 'MONTHLY', confidenceLevel: 'LIKELY', confidenceScore: 95, evidenceCount: 3, firstSeenAt: '2026-01-01T00:00:00.000Z', lastPaymentAt: '2026-01-20T00:00:00.000Z', lastSeenAt: '2026-02-01T00:00:00.000Z', serviceName: 'Private Service', source: 'MULTI_PROVIDER_METADATA' },
     ])
   })
 
@@ -112,5 +112,25 @@ describe('Microsoft integration API', () => {
     expect(await Account.countDocuments({ userId: first.userId })).toBe(1)
     expect(await AccountEvidence.countDocuments({ userId: first.userId })).toBe(1)
     expect(await MicrosoftSyncJob.countDocuments({ userId: first.userId })).toBe(1)
+  })
+
+  it('cancels a scan by removing only signals inserted by its run', async () => {
+    const first = await register('microsoft-cancel@example.com')
+    const connection = await MicrosoftConnection.create({
+      userId: first.userId, microsoftAccountId: 'microsoft-cancel-account', email: 'microsoft-cancel@example.com',
+      encryptedAccessToken: encryptSecret('private-access-token'), encryptedRefreshToken: encryptSecret('private-refresh-token'),
+      scopes: ['Mail.ReadBasic'], tokenExpiresAt: new Date(Date.now() + 3_600_000),
+    })
+    await first.agent.post('/api/microsoft/sync').expect(202)
+    const job = await MicrosoftSyncJob.findOne({ userId: first.userId }).select('+runId')
+    await MicrosoftSignal.create([
+      { userId: first.userId, connectionId: connection.id, messageIdHash: 'current-run', threadIdHash: 'current-thread', occurredAt: new Date(), syncRunId: job.runId },
+      { userId: first.userId, connectionId: connection.id, messageIdHash: 'previous-run', threadIdHash: 'previous-thread', occurredAt: new Date(), syncRunId: 'completed-earlier-run' },
+    ])
+
+    const cancelled = await first.agent.delete('/api/microsoft/sync').expect(200)
+    expect(cancelled.body.sync.status).toBe('CANCELLED')
+    expect(await MicrosoftSignal.countDocuments({ userId: first.userId, messageIdHash: 'current-run' })).toBe(0)
+    expect(await MicrosoftSignal.countDocuments({ userId: first.userId, messageIdHash: 'previous-run' })).toBe(1)
   })
 })

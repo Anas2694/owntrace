@@ -14,7 +14,7 @@ import {
   getConnectionForUser,
 } from '../services/microsoft-oauth.service.js'
 import { listMicrosoftSubscriptionsForUser } from '../services/microsoft-subscription.service.js'
-import { cancelAndWaitForSync, getSyncJob, processNextBatch, startSync } from '../services/microsoft-sync.service.js'
+import { cancelAndWaitForSync, getSyncJob, getSyncPolicy, processNextBatch, startSync } from '../services/microsoft-sync.service.js'
 import AppError from '../utils/app-error.js'
 import { logEvent } from '../utils/logger.js'
 
@@ -31,7 +31,7 @@ microsoftRouter.get('/connection', async (request, response) => {
   const connection = await getConnectionForUser(request.auth.userId)
   response.status(200).json({
     success: true,
-    microsoft: { available: isMicrosoftConfigured(), connection: connection ? connection.toJSON() : null },
+    microsoft: { available: isMicrosoftConfigured(), connection: connection ? connection.toJSON() : null, syncPolicy: getSyncPolicy() },
   })
 })
 

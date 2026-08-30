@@ -40,7 +40,7 @@ function ExposuresPage() {
           </ul>
           <Pagination label="Exposure review pages" onPageChange={setPage} pagination={result.pagination} />
         </section>
-      ) : result ? <EmptyState title="No account evidence yet">Complete a Gmail metadata scan to build the service footprint.</EmptyState> : null}
+      ) : result ? <EmptyState title="No account evidence yet">Complete a mail metadata scan to build the service footprint.</EmptyState> : null}
     </PrivacyPageLayout>
   )
 }

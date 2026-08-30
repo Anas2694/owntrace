@@ -15,6 +15,21 @@ const callbackMessages = {
   connection_failed: 'Microsoft connection could not be completed. Please try again.',
 }
 
+const syncNotes = {
+  MESSAGE_LIMIT_REACHED: 'The configured message limit was reached. Saved clues remain available, and a later scan can check newer messages.',
+}
+
+function getSyncTitle(sync, isSyncing) {
+  if (isSyncing) return 'Scanning Microsoft metadata…'
+  if (!sync) return 'Ready to scan'
+  if (sync.status === 'COMPLETED') return sync.lastErrorCode === 'MESSAGE_LIMIT_REACHED'
+    ? 'Scan completed at the configured limit'
+    : 'Scan completed'
+  if (sync.status === 'CANCELLED') return 'Scan cancelled'
+  if (sync.status === 'FAILED') return 'Scan needs attention'
+  return 'Scan paused and ready to continue'
+}
+
 function formatDate(value) {
   return value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Not yet'
 }
@@ -29,7 +44,7 @@ function MicrosoftConnectionPage() {
   const titleRef = useRef(null)
   const stopSyncRef = useRef(false)
   const [callbackStatus] = useState(() => searchParams.get('microsoft'))
-  const [microsoftState, setMicrosoftState] = useState({ available: false, connection: null })
+  const [microsoftState, setMicrosoftState] = useState({ available: false, connection: null, syncPolicy: { batchSize: 25, messageLimit: null } })
   const [sync, setSync] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
@@ -120,7 +135,7 @@ function MicrosoftConnectionPage() {
       <div className="google-actions">{isConnected ? <><a className="google-provider-action" href="/api/microsoft/oauth/start"><MicrosoftMark />Continue with Microsoft</a><button type="button" onClick={handleDisconnect} disabled={isDisconnecting}>{isDisconnecting ? 'Disconnecting…' : 'Disconnect Microsoft'}</button></> : microsoftState.available ? <a className="google-provider-action" href="/api/microsoft/oauth/start"><MicrosoftMark />Continue with Microsoft</a> : <button type="button" disabled>Microsoft connection unavailable</button>}</div>
       {!isConnected && !isLoading && !microsoftState.available ? <p className="google-configuration-note">Microsoft OAuth has not been configured for this environment. No access can be requested yet.</p> : null}
     </section>
-    {isConnected ? <section className="google-sync-card" aria-labelledby="sync-title" aria-busy={isSyncing}><div><p className="google-card-kicker">Metadata scan</p><h2 id="sync-title">{sync?.status?.replaceAll('_', ' ') || 'Ready to scan'}</h2><p>OwnTrace processes up to 25 Inbox messages per request, stores only derived metadata signals, and safely deduplicates messages already seen.</p></div><dl><div><dt>Processed</dt><dd>{sync?.processedCount ?? 0}</dd></div><div><dt>New signals</dt><dd>{sync?.storedCount ?? 0}</dd></div><div><dt>Inbox total</dt><dd>Not requested</dd></div></dl>{sync?.lastErrorCode ? <p className="google-configuration-note">Scan note: {sync.lastErrorCode.replaceAll('_', ' ').toLowerCase()}.</p> : null}<div className="google-actions google-sync-actions">{sync?.status === 'QUEUED' && !isSyncing ? <button className="google-primary-action" type="button" onClick={() => runSyncBatches(sync)}>Resume scan</button> : <button className="google-primary-action" type="button" onClick={handleStartSync} disabled={isSyncing}>{isSyncing ? 'Scanning metadata…' : activeSync ? 'Continue scan' : sync?.status === 'COMPLETED' ? 'Scan again' : 'Start metadata scan'}</button>}{activeSync ? <button type="button" onClick={handleCancelSync}>Cancel scan</button> : null}</div></section> : null}
+    {isConnected ? <section className="google-sync-card" aria-labelledby="sync-title" aria-busy={isSyncing}><div><p className="google-card-kicker">Metadata scan</p><h2 id="sync-title" aria-live="polite">{getSyncTitle(sync, isSyncing)}</h2><p>OwnTrace checks up to {microsoftState.syncPolicy?.messageLimit?.toLocaleString() || 'the configured limit'} Inbox metadata records per scan, {microsoftState.syncPolicy?.batchSize || 25} at a time, and can finish sooner when no more results remain. It safely deduplicates messages already seen. A saved clue represents one message—not one discovered account.</p></div><dl><div><dt>Email metadata checked</dt><dd>{sync?.processedCount ?? 0}</dd></div><div><dt>New clues saved</dt><dd>{sync?.storedCount ?? 0}</dd></div></dl>{sync?.lastErrorCode ? <p className="google-configuration-note">{syncNotes[sync.lastErrorCode] || 'The scan finished with a provider note. Your saved progress is safe.'}</p> : null}<div className="google-actions google-sync-actions">{sync?.status === 'COMPLETED' ? <Link className="google-primary-action" to="/dashboard">View dashboard</Link> : null}{sync?.status === 'QUEUED' && !isSyncing ? <button className="google-primary-action" type="button" onClick={() => runSyncBatches(sync)}>Resume scan</button> : <button className="google-primary-action" type="button" onClick={handleStartSync} disabled={isSyncing}>{isSyncing ? 'Scanning metadata…' : sync?.status === 'COMPLETED' ? 'Check for newer messages' : 'Start metadata scan'}</button>}{activeSync ? <button type="button" onClick={handleCancelSync}>Cancel scan</button> : null}</div></section> : null}
     <section className="google-boundaries" aria-labelledby="boundaries-title"><div><p className="google-eyebrow">Before you connect</p><h2 id="boundaries-title">What this permission means</h2></div><ul><li><strong>Read selected metadata</strong><span>Sender, normalized subject signal, and received date needed for account and subscription evidence.</span></li><li><strong>No message bodies or attachments</strong><span>Mail.ReadBasic does not grant full message body access.</span></li><li><strong>Disconnect when you choose</strong><span>OwnTrace removes locally derived Microsoft data when you disconnect.</span></li></ul></section>
   </div></main>
 }
