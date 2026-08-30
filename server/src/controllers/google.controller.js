@@ -14,6 +14,7 @@ import {
 import { buildGoogleCapabilities } from '../services/google-capability.service.js'
 import {
   cancelSync,
+  getSyncPolicy,
   getSyncJob,
   processNextBatch,
   startSync,
@@ -41,6 +42,7 @@ async function getConnection(request, response) {
       available: isGoogleConfigured(),
       capabilities: buildGoogleCapabilities(connection),
       connection: connection ? connection.toJSON() : null,
+      syncPolicy: getSyncPolicy(),
     },
   })
 }

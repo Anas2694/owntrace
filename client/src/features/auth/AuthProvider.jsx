@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import api from '../../services/api.js'
+import api, { SESSION_ENDED_EVENT } from '../../services/api.js'
 import AuthContext from './auth-context.js'
 
 function AuthProvider({ children }) {
@@ -25,6 +25,17 @@ function AuthProvider({ children }) {
   useEffect(() => {
     restoreSession()
   }, [restoreSession])
+
+  useEffect(() => {
+    function handleSessionEnded() {
+      setUser(null)
+      setSessionError(false)
+      setIsLoading(false)
+    }
+
+    window.addEventListener(SESSION_ENDED_EVENT, handleSessionEnded)
+    return () => window.removeEventListener(SESSION_ENDED_EVENT, handleSessionEnded)
+  }, [])
 
   const login = useCallback(async (credentials) => {
     const response = await api.post('/auth/login', credentials)

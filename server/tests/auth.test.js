@@ -509,6 +509,7 @@ describe('authentication API', () => {
           unsupported: [{ active: false, id: 'google-connected-apps-inventory' }],
         },
         connection: null,
+        syncPolicy: { batchSize: 25, messageLimit: 2_000 },
       })
       await request(app).get('/api/google/connection').expect(401)
     })

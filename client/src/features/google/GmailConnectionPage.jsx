@@ -15,6 +15,24 @@ const callbackMessages = {
   connection_failed: 'Google connection could not be completed. Please try again.',
 }
 
+const syncNotes = {
+  MESSAGE_LIMIT_REACHED:
+    'OwnTrace stopped at the configured safety limit. This scan might not include your entire mailbox.',
+  PARTIAL_METADATA_RESULTS:
+    'Some message metadata was unavailable. Saved progress is safe, and you can run another scan later.',
+}
+
+function getSyncTitle(sync, isSyncing) {
+  if (isSyncing) return 'Scanning email metadata'
+  if (!sync) return 'Ready to scan'
+  if (sync.lastErrorCode === 'MESSAGE_LIMIT_REACHED') return 'Stopped at the safety limit'
+  if (sync.status === 'COMPLETED') return 'Scan complete'
+  if (sync.status === 'CANCELLED') return 'Scan cancelled'
+  if (sync.status === 'FAILED') return 'Scan needs attention'
+  if (sync.status === 'QUEUED') return 'Ready to resume'
+  return 'Finishing the current batch'
+}
+
 function formatDate(value) {
   if (!value) return 'Not yet'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -57,6 +75,7 @@ function GmailConnectionPage() {
     available: false,
     capabilities: { confirmed: [], inferred: [], unsupported: [] },
     connection: null,
+    syncPolicy: { batchSize: 25, messageLimit: null },
   })
   const [sync, setSync] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -181,7 +200,10 @@ function GmailConnectionPage() {
       <div className="google-shell">
         <header className="google-header">
           <Link to="/" className="google-brand">OwnTrace</Link>
-          <Link to="/onboarding">Review privacy setup</Link>
+          <nav aria-label="Google connection">
+            {isConnected ? <Link to="/dashboard">Dashboard</Link> : null}
+            <Link to="/onboarding">Review privacy setup</Link>
+          </nav>
         </header>
 
         <section className="google-intro" aria-labelledby="google-title">
@@ -249,30 +271,34 @@ function GmailConnectionPage() {
           <section className="google-sync-card" aria-labelledby="sync-title" aria-busy={isSyncing}>
             <div>
               <p className="google-card-kicker">Metadata scan</p>
-              <h2 id="sync-title">{sync?.status?.replaceAll('_', ' ') || 'Ready to scan'}</h2>
+              <h2 aria-live="polite" id="sync-title">{getSyncTitle(sync, isSyncing)}</h2>
               <p>
-                OwnTrace processes 25 messages per request, stores only derived metadata signals,
-                and safely deduplicates messages already seen.
+                OwnTrace checks up to {googleState.syncPolicy.messageLimit?.toLocaleString() || 'the configured limit'}
+                {' '}email metadata records per scan, {googleState.syncPolicy.batchSize} at a time, and can
+                finish sooner when no more results remain. It safely deduplicates messages already seen.
+                A saved clue represents one message—not one discovered account.
               </p>
             </div>
             <dl>
-              <div><dt>Processed</dt><dd>{sync?.processedCount ?? 0}</dd></div>
-              <div><dt>New signals</dt><dd>{sync?.storedCount ?? 0}</dd></div>
-              <div><dt>Estimated mailbox messages</dt><dd>{sync?.estimatedTotal ?? 'Unknown'}</dd></div>
+              <div><dt>Email metadata checked</dt><dd>{sync?.processedCount ?? 0}</dd></div>
+              <div><dt>New clues saved</dt><dd>{sync?.storedCount ?? 0}</dd></div>
             </dl>
             {sync?.lastErrorCode ? (
               <p className="google-configuration-note">
-                Scan note: {sync.lastErrorCode.replaceAll('_', ' ').toLowerCase()}.
+                {syncNotes[sync.lastErrorCode] || 'The scan finished with a provider note. Your saved progress is safe.'}
               </p>
             ) : null}
             <div className="google-actions google-sync-actions">
+              {sync?.status === 'COMPLETED' ? (
+                <Link className="google-primary-action" to="/dashboard">View dashboard</Link>
+              ) : null}
               {sync?.status === 'QUEUED' && !isSyncing ? (
                 <button className="google-primary-action" type="button" onClick={() => runSyncBatches(sync)}>
                   Resume scan
                 </button>
               ) : (
                 <button className="google-primary-action" type="button" onClick={handleStartSync} disabled={isSyncing}>
-                  {isSyncing ? 'Scanning metadata…' : sync?.status === 'COMPLETED' ? 'Scan again' : 'Start metadata scan'}
+                  {isSyncing ? 'Scanning metadata…' : sync?.status === 'COMPLETED' ? 'Check for newer messages' : 'Start metadata scan'}
                 </button>
               )}
               {isSyncing ? <button type="button" onClick={handleCancelSync}>Cancel scan</button> : null}

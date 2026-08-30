@@ -56,6 +56,7 @@ function OnboardingPage() {
   const [stepIndex, setStepIndex] = useState(() => getInitialStep(user.onboardingStatus))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  const isReviewingCompletedSetup = ['SCAN_PENDING', 'COMPLETED'].includes(user.onboardingStatus)
   const step = steps[stepIndex]
   const progress = useMemo(() => `${stepIndex + 1} of ${steps.length}`, [stepIndex])
 
@@ -70,14 +71,18 @@ function OnboardingPage() {
 
     try {
       if (stepIndex === 0) {
-        await api.patch('/onboarding', { status: 'PRIVACY_REVIEWED' })
-        await restoreSession({ showLoading: false })
+        if (!isReviewingCompletedSetup) {
+          await api.patch('/onboarding', { status: 'PRIVACY_REVIEWED' })
+          await restoreSession({ showLoading: false })
+        }
         showStep(1)
       } else if (stepIndex === 1) {
         showStep(2)
       } else {
-        await api.patch('/onboarding', { status: 'GMAIL_PENDING' })
-        await restoreSession({ showLoading: false })
+        if (!isReviewingCompletedSetup) {
+          await api.patch('/onboarding', { status: 'GMAIL_PENDING' })
+          await restoreSession({ showLoading: false })
+        }
         navigate('/connect/gmail', { replace: true })
       }
     } catch (requestError) {
@@ -127,7 +132,11 @@ function OnboardingPage() {
               </button>
             ) : <span />}
             <button type="button" className="onboarding-continue" onClick={continueOnboarding} disabled={isSaving}>
-              {isSaving ? 'Saving…' : step.action}
+              {isSaving
+                ? 'Saving…'
+                : isReviewingCompletedSetup && stepIndex === steps.length - 1
+                  ? 'Return to Gmail connection'
+                  : step.action}
             </button>
           </div>
         </section>
