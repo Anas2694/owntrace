@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import api from '../../services/api.js'
-import WorkspaceHeader from '../workspace/WorkspaceHeader.jsx'
+import PrivacyWorkspace from '../privacy/PrivacyWorkspace.jsx'
 import './account-settings.css'
 
 function AccountSettingsPage() {
@@ -35,9 +35,9 @@ function AccountSettingsPage() {
   const canDelete = values.confirmation === 'DELETE' && Boolean(values.password) && !isDeleting
 
   return (
-    <main className="settings-page">
-      <div className="settings-shell">
-        <WorkspaceHeader />
+    <PrivacyWorkspace title="Settings">
+      <main className="settings-page">
+        <div className="settings-shell">
 
         <section className="settings-intro" aria-labelledby="settings-title">
           <div>
@@ -112,8 +112,9 @@ function AccountSettingsPage() {
             connected-app access directly with Google or Microsoft when prompted.
           </p>
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </PrivacyWorkspace>
   )
 }
 

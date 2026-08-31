@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../services/api.js'
 import useAuth from '../auth/useAuth.js'
+import PrivacyWorkspace from '../privacy/PrivacyWorkspace.jsx'
 import '../google/google-connection.css'
 
 const callbackMessages = {
@@ -124,8 +125,7 @@ function MicrosoftConnectionPage() {
   const connection = microsoftState.connection
   const isConnected = Boolean(connection)
 
-  return <main className="google-page"><div className="google-shell">
-    <header className="google-header"><Link to="/dashboard" className="google-brand">OwnTrace</Link><Link to="/onboarding">Review privacy setup</Link></header>
+  return <PrivacyWorkspace title="Microsoft connection"><main className="google-page"><div className="google-shell">
     <section className="google-intro" aria-labelledby="microsoft-title"><p className="google-eyebrow">Microsoft connection</p><h1 ref={titleRef} id="microsoft-title" tabIndex="-1">Connect Microsoft with clear boundaries.</h1><p>OwnTrace requests basic mail metadata for account discovery—not permission to read message bodies, send, modify, or delete mail.</p></section>
     {callbackStatus && callbackMessages[callbackStatus] ? <p className={`google-notice ${callbackStatus === 'connected' ? 'is-success' : ''}`} role="status">{callbackMessages[callbackStatus]}</p> : null}
     {error ? <p className="google-notice" role="alert">{error}</p> : null}
@@ -137,7 +137,7 @@ function MicrosoftConnectionPage() {
     </section>
     {isConnected ? <section className="google-sync-card" aria-labelledby="sync-title" aria-busy={isSyncing}><div><p className="google-card-kicker">Metadata scan</p><h2 id="sync-title" aria-live="polite">{getSyncTitle(sync, isSyncing)}</h2><p>OwnTrace checks up to {microsoftState.syncPolicy?.messageLimit?.toLocaleString() || 'the configured limit'} Inbox metadata records per scan, {microsoftState.syncPolicy?.batchSize || 25} at a time, and can finish sooner when no more results remain. It safely deduplicates messages already seen. A saved clue represents one message—not one discovered account.</p></div><dl><div><dt>Email metadata checked</dt><dd>{sync?.processedCount ?? 0}</dd></div><div><dt>New clues saved</dt><dd>{sync?.storedCount ?? 0}</dd></div></dl>{sync?.lastErrorCode ? <p className="google-configuration-note">{syncNotes[sync.lastErrorCode] || 'The scan finished with a provider note. Your saved progress is safe.'}</p> : null}<div className="google-actions google-sync-actions">{sync?.status === 'COMPLETED' ? <Link className="google-primary-action" to="/dashboard">View dashboard</Link> : null}{sync?.status === 'QUEUED' && !isSyncing ? <button className="google-primary-action" type="button" onClick={() => runSyncBatches(sync)}>Resume scan</button> : <button className="google-primary-action" type="button" onClick={handleStartSync} disabled={isSyncing}>{isSyncing ? 'Scanning metadata…' : sync?.status === 'COMPLETED' ? 'Check for newer messages' : 'Start metadata scan'}</button>}{activeSync ? <button type="button" onClick={handleCancelSync}>Cancel scan</button> : null}</div></section> : null}
     <section className="google-boundaries" aria-labelledby="boundaries-title"><div><p className="google-eyebrow">Before you connect</p><h2 id="boundaries-title">What this permission means</h2></div><ul><li><strong>Read selected metadata</strong><span>Sender, normalized subject signal, and received date needed for account and subscription evidence.</span></li><li><strong>No message bodies or attachments</strong><span>Mail.ReadBasic does not grant full message body access.</span></li><li><strong>Disconnect when you choose</strong><span>OwnTrace removes locally derived Microsoft data when you disconnect.</span></li></ul></section>
-  </div></main>
+  </div></main></PrivacyWorkspace>
 }
 
 export default MicrosoftConnectionPage

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../services/api.js'
 import { formatEnum } from '../accounts/account-format.js'
-import WorkspaceHeader from '../workspace/WorkspaceHeader.jsx'
+import PrivacyWorkspace from '../privacy/PrivacyWorkspace.jsx'
 import './identity.css'
 
 function IdentityNode({ node, children }) {
@@ -82,9 +82,9 @@ function IdentityPage() {
   )
 
   return (
-    <main className="identity-page">
-      <div className="identity-shell">
-        <WorkspaceHeader />
+    <PrivacyWorkspace title="Identity map">
+      <main className="identity-page">
+        <div className="identity-shell">
 
         <section className="identity-intro" aria-labelledby="identity-title">
           <div>
@@ -210,8 +210,9 @@ function IdentityPage() {
             </p>
           </>
         )}
-      </div>
-    </main>
+        </div>
+      </main>
+    </PrivacyWorkspace>
   )
 }
 

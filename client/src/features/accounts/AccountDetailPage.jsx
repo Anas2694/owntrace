@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import api from '../../services/api.js'
-import WorkspaceHeader from '../workspace/WorkspaceHeader.jsx'
+import PrivacyWorkspace from '../privacy/PrivacyWorkspace.jsx'
 import { formatAccountDate, formatEnum, getEvidenceLabel } from './account-format.js'
 import './accounts.css'
 
@@ -55,10 +55,10 @@ function AccountDetailPage() {
   const account = result?.account
 
   return (
-    <main className="accounts-page">
-      <div className="accounts-shell">
-        <WorkspaceHeader />
-        <Link className="accounts-back-link" to="/accounts">← Back to accounts</Link>
+    <PrivacyWorkspace title="Account evidence">
+      <main className="accounts-page">
+        <div className="accounts-shell">
+          <Link className="accounts-back-link" to="/accounts">← Back to accounts</Link>
 
         {isLoading ? (
           <div className="accounts-loading accounts-detail-loading" role="status" aria-busy="true">
@@ -143,8 +143,9 @@ function AccountDetailPage() {
             </div>
           </>
         )}
-      </div>
-    </main>
+        </div>
+      </main>
+    </PrivacyWorkspace>
   )
 }
 

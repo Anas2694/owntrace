@@ -2,9 +2,11 @@
 
 ## Direction
 
-OwnTrace is a calm evidence ledger for a person's digital footprint. The interface should feel private, precise, and trustworthy rather than alarmist or promotional. It must help users distinguish observed evidence, supported inference, and recommended action at a glance.
+OwnTrace is a high-trust evidence system for a person's digital footprint. The interface should feel private, precise, dimensional, and authored rather than alarmist or templated. It must help users distinguish observed evidence, supported inference, and recommended action at a glance.
 
-The memorable visual idea is a restrained dark workspace illuminated by a single privacy-green signal. Green indicates direction, confirmation, or active focus; it is not decoration.
+The visual thesis has two deliberate chapters. Public and authentication surfaces use white space, near-black Figtree typography, a black pill navigation system, and a full-bleed cyan product stage. The home stage contains a real WebGL identity constellation—service cards and live evidence packets orbiting a protected core—beside an honest account-evidence workflow. Authenticated surfaces switch to a near-black operational ledger with square panels, hairline boundaries, tabular values, and pale lime reserved for active or confirmed state.
+
+This system directly applies the open-source `product-proof-saas`, `operational-enterprise-ai`, `no-ai-design-slop`, `webgl-3d-object`, and `animation-systems` design prompts. Product behavior remains the proof; 3D and motion explain the evidence model rather than decorating it.
 
 ## Product language
 
@@ -18,11 +20,12 @@ The memorable visual idea is a restrained dark workspace illuminated by a single
 
 The canonical tokens live in `client/src/index.css`.
 
-- Background: near-black green (`--color-bg`) for privacy and focus.
-- Surfaces: progressively lighter green-black layers; avoid glass effects that reduce legibility.
-- Primary text: near-white with a slight green cast.
+- Public background: clean white with near-black ink and cyan focus/product-stage color.
+- Product background: near-black neutral (`--color-bg`) for privacy and operational focus.
+- Product surfaces: progressively lighter neutral layers with hard hairline boundaries and minimal shadow.
+- Primary product text: warm near-white.
 - Secondary text: use `--color-text-muted`, `--color-text-soft`, and `--color-text-subtle` in that visibility order.
-- Accent: `--color-accent` for primary actions, focus, active navigation, and positive status only.
+- Accent: `--color-accent` for confirmed state and active navigation. Cyan identifies evidence, interaction, and focus on public surfaces.
 - Danger, warning, and information colors communicate state and must not be used as ambient decoration.
 - Text and meaningful controls must meet WCAG AA contrast against their rendered backgrounds.
 
@@ -38,7 +41,7 @@ OwnTrace intentionally uses a privacy-friendly local system sans-serif stack. It
 
 ## Layout
 
-- Marketing pages may use generous editorial spacing and expressive scale.
+- Marketing pages use generous editorial spacing, asymmetry, and one evidence-led WebGL focal object.
 - Authentication and onboarding prioritize the next action over promotional content, especially on mobile.
 - Authenticated pages are denser, scannable workspaces with stable navigation and concise cards.
 - Keep content within a readable maximum width and use fluid spacing rather than breakpoint-specific jumps.
@@ -47,7 +50,7 @@ OwnTrace intentionally uses a privacy-friendly local system sans-serif stack. It
 ## Components
 
 - Primary buttons use the green accent with dark text. Secondary buttons stay neutral.
-- Cards use subtle borders and tonal separation. Avoid excessive rounding, shadows, and nested card stacks.
+- Cards use subtle borders and tonal separation. Authenticated cards use low radii and minimal shadow. Avoid glass-everywhere styling, ornamental bento grids, and nested card stacks.
 - Metrics must be named, linked when actionable, and formatted with tabular numerals.
 - Status pills supplement clear text; color alone never carries meaning.
 - Forms use persistent labels, useful autocomplete attributes, visible errors, and explicit focus states.
@@ -56,7 +59,8 @@ OwnTrace intentionally uses a privacy-friendly local system sans-serif stack. It
 ## Interaction and motion
 
 - Every interactive element needs visible hover, focus, active, and disabled states where applicable.
-- Motion communicates navigation or state change. Use opacity and transforms for short transitions.
+- Motion communicates navigation, state change, or the relationship between account signals and the protected identity core. Use opacity and transforms for short UI transitions.
+- The WebGL hero clamps device pixel ratio, pauses offscreen and when the document is hidden, loads as a separate bundle, and disposes its resources on teardown.
 - Respect `prefers-reduced-motion`; no task may depend on animation to be understood.
 - Mobile dialogs and navigation must manage focus, close with Escape, and prevent interaction with hidden content.
 

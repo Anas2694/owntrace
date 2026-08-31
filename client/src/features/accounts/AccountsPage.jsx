@@ -1,7 +1,7 @@
 import { useDeferredValue, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../services/api.js'
-import WorkspaceHeader from '../workspace/WorkspaceHeader.jsx'
+import PrivacyWorkspace from '../privacy/PrivacyWorkspace.jsx'
 import { formatAccountDate, formatEnum } from './account-format.js'
 import './accounts.css'
 
@@ -120,9 +120,9 @@ function AccountsPage() {
   const hasFilters = Boolean(search || confidence || dormant)
 
   return (
-    <main className="accounts-page">
-      <div className="accounts-shell">
-        <WorkspaceHeader />
+    <PrivacyWorkspace title="Accounts">
+      <main className="accounts-page">
+        <div className="accounts-shell">
 
         <section className="accounts-intro" aria-labelledby="accounts-title">
           <div>
@@ -237,8 +237,9 @@ function AccountsPage() {
             </nav>
           ) : null}
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </PrivacyWorkspace>
   )
 }
 

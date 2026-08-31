@@ -438,15 +438,85 @@
   outline-offset: 4px;
 }
 
+/* Authenticated product density: connection pages use the shared workspace shell. */
+.privacy-workspace .google-page {
+  min-height: auto;
+  padding: clamp(2rem, 5vw, 4.5rem);
+  background: transparent;
+}
+
+.privacy-workspace .google-intro {
+  grid-template-columns: minmax(0, 1.15fr) minmax(16rem, 0.6fr);
+  gap: 1rem clamp(2rem, 6vw, 5rem);
+  padding: 0 0 2.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.privacy-workspace .google-intro h1 {
+  max-width: 13ch;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 780;
+  line-height: 0.98;
+}
+
+.privacy-workspace .google-intro > p:last-child {
+  font-size: 0.92rem;
+}
+
+.privacy-workspace .google-connection-card,
+.privacy-workspace .google-sync-card,
+.privacy-workspace .google-capability-grid article,
+.privacy-workspace .google-boundaries li {
+  border: 1px solid rgba(225, 231, 255, 0.1);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.045), transparent 58%),
+    rgba(16, 19, 33, 0.72);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.14);
+}
+
+.privacy-workspace .google-connection-card,
+.privacy-workspace .google-sync-card {
+  margin-top: 1rem;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border-radius: var(--radius-lg);
+}
+
+.privacy-workspace .google-connection-card h2,
+.privacy-workspace .google-sync-card h2,
+.privacy-workspace .google-boundaries h2 {
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+}
+
+.privacy-workspace .google-capabilities,
+.privacy-workspace .google-boundaries {
+  padding-top: clamp(3rem, 7vw, 5.5rem);
+}
+
+.privacy-workspace .google-boundaries {
+  padding-bottom: 1rem;
+}
+
+.privacy-workspace .google-capabilities-heading h2 {
+  font-size: clamp(1.8rem, 4vw, 3.2rem);
+}
+
+.privacy-workspace .google-capability-grid article {
+  border-radius: var(--radius-md);
+}
+
 @media (max-width: 54rem) {
   .google-intro,
+  .privacy-workspace .google-intro,
   .google-boundaries,
   .google-capabilities-heading {
     grid-template-columns: 1fr;
   }
 
   .google-intro > p:last-child,
+  .privacy-workspace .google-intro > p:last-child,
   .google-intro .google-eyebrow,
+  .privacy-workspace .google-intro .google-eyebrow,
+  .privacy-workspace .google-intro h1,
   .google-intro h1 {
     grid-column: 1;
     grid-row: auto;
@@ -502,3 +572,22 @@
     width: 100%;
   }
 }
+
+/* Operational connection ledger inside the authenticated workspace. */
+.privacy-workspace .google-intro { border-bottom-color: var(--color-border-strong); }
+.privacy-workspace .google-connection-card,
+.privacy-workspace .google-sync-card,
+.privacy-workspace .google-capability-grid article,
+.privacy-workspace .google-boundaries li {
+  border-color: var(--color-border-strong);
+  border-radius: 0.42rem;
+  background: rgba(14, 18, 27, 0.94);
+  box-shadow: none;
+}
+
+.privacy-workspace .google-capability-grid { gap: 0.75rem; }
+.privacy-workspace .google-capability-grid article { min-height: 12rem; }
+.privacy-workspace .google-connection-card,
+.privacy-workspace .google-sync-card { border-radius: 0.42rem; }
+.privacy-workspace .google-button,
+.privacy-workspace .google-account-link { border-radius: 0.38rem; }

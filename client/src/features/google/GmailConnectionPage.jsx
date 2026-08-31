@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../services/api.js'
 import useAuth from '../auth/useAuth.js'
+import PrivacyWorkspace from '../privacy/PrivacyWorkspace.jsx'
 import './google-connection.css'
 
 const callbackMessages = {
@@ -196,16 +197,9 @@ function GmailConnectionPage() {
   const isConnected = Boolean(connection)
 
   return (
-    <main className="google-page">
-      <div className="google-shell">
-        <header className="google-header">
-          <Link to="/" className="google-brand">OwnTrace</Link>
-          <nav aria-label="Google connection">
-            {isConnected ? <Link to="/dashboard">Dashboard</Link> : null}
-            <Link to="/onboarding">Review privacy setup</Link>
-          </nav>
-        </header>
-
+    <PrivacyWorkspace title="Gmail connection">
+      <main className="google-page">
+        <div className="google-shell">
         <section className="google-intro" aria-labelledby="google-title">
           <p className="google-eyebrow">Google connection</p>
           <h1 ref={titleRef} id="google-title" tabIndex="-1">
@@ -351,8 +345,9 @@ function GmailConnectionPage() {
             <li><strong>Disconnect when you choose</strong><span>OwnTrace revokes provider access before removing its local connection.</span></li>
           </ul>
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </PrivacyWorkspace>
   )
 }
 

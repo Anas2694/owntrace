@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import '../google/google-connection.css'
+import PrivacyWorkspace from '../privacy/PrivacyWorkspace.jsx'
 
 const providers = [
   {
@@ -16,13 +17,9 @@ const providers = [
 
 function MailConnectionsPage() {
   return (
-    <main className="google-page">
-      <div className="google-shell">
-        <header className="google-header">
-          <Link to="/dashboard" className="google-brand">OwnTrace</Link>
-          <Link to="/onboarding">Review privacy setup</Link>
-        </header>
-
+    <PrivacyWorkspace title="Mail connections">
+      <main className="google-page">
+        <div className="google-shell">
         <section className="google-intro" aria-labelledby="mail-connections-title">
           <p className="google-eyebrow">Mail connections</p>
           <h1 id="mail-connections-title">Choose the source you want to connect.</h1>
@@ -41,8 +38,9 @@ function MailConnectionsPage() {
             ))}
           </div>
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </PrivacyWorkspace>
   )
 }
 

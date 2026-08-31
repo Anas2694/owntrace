@@ -8,6 +8,34 @@ import PrivacyPageLayout, {
   StatusPill,
 } from './PrivacyPageLayout.jsx'
 import { formatDate, formatEnum } from './privacy-format.js'
+import WorkspaceIcon from './WorkspaceIcon.jsx'
+
+function getNextStep(data) {
+  if (!data.accountSummary.total) {
+    return {
+      description: 'Connect Gmail or Microsoft, review the requested permission, then run a metadata scan to build your first account inventory.',
+      label: 'Review mail connections',
+      title: 'Connect a source when you are ready',
+      to: '/connect',
+    }
+  }
+
+  if (data.actionSummary.open) {
+    return {
+      description: `${data.actionSummary.open} evidence-based ${data.actionSummary.open === 1 ? 'recommendation is' : 'recommendations are'} waiting for your review. OwnTrace will explain the reason before you act.`,
+      label: 'Open privacy inbox',
+      title: 'Review the next recommended action',
+      to: '/privacy-inbox',
+    }
+  }
+
+  return {
+    description: 'Your current recommendations are clear. Review recently observed services or check for new provider metadata when it suits you.',
+    label: 'Review discovered accounts',
+    title: 'Keep your account inventory current',
+    to: '/accounts',
+  }
+}
 
 function DashboardPage() {
   const [data, setData] = useState(null)
@@ -46,21 +74,36 @@ function DashboardPage() {
     return () => controller.abort()
   }, [])
 
+  const nextStep = data ? getNextStep(data) : null
+
   return (
     <PrivacyPageLayout
-      description="A current, evidence-based view assembled from your real OwnTrace account, identity, recommendation, subscription-signal, and notification APIs."
+      description="See what OwnTrace has observed, what needs attention, and the clearest next step—without overstating what the evidence proves."
       eyebrow="Dashboard"
-      title="Your digital footprint, without invented certainty."
+      title="Your privacy overview."
     >
       {error ? <ErrorState>{error}</ErrorState> : null}
       {!data && !error ? <LoadingState>Assembling your workspace…</LoadingState> : null}
       {data ? (
         <>
+          <section className="privacy-next-step" aria-labelledby="dashboard-next-step-title">
+            <div className="privacy-next-step-marker" aria-hidden="true">Next</div>
+            <div>
+              <p>Recommended focus</p>
+              <h2 id="dashboard-next-step-title">{nextStep.title}</h2>
+              <span>{nextStep.description}</span>
+            </div>
+            <Link className="privacy-action is-primary" to={nextStep.to}>
+              {nextStep.label}
+              <WorkspaceIcon className="privacy-action-icon" name="arrow" />
+            </Link>
+          </section>
+
           <div className="privacy-metric-grid" aria-label="Privacy overview">
-            <Link className="privacy-metric" to="/accounts"><span>Discovered accounts</span><strong>{data.accountSummary.total}</strong></Link>
-            <Link className="privacy-metric" to="/accounts"><span>Dormant signals</span><strong>{data.accountSummary.dormant}</strong></Link>
-            <Link className="privacy-metric" to="/subscriptions"><span>Subscription signals</span><strong>{data.subscriptionTotal}</strong></Link>
-            <Link className="privacy-metric" to="/privacy-inbox"><span>Open privacy actions</span><strong>{data.actionSummary.open}</strong></Link>
+            <Link className="privacy-metric" to="/accounts"><span><WorkspaceIcon name="accounts" />Discovered accounts</span><strong>{data.accountSummary.total}</strong><small>Review evidence</small></Link>
+            <Link className="privacy-metric" to="/accounts"><span><WorkspaceIcon name="exposures" />Dormant signals</span><strong>{data.accountSummary.dormant}</strong><small>Check activity</small></Link>
+            <Link className="privacy-metric" to="/subscriptions"><span><WorkspaceIcon name="subscriptions" />Subscription signals</span><strong>{data.subscriptionTotal}</strong><small>Verify billing</small></Link>
+            <Link className="privacy-metric" to="/privacy-inbox"><span><WorkspaceIcon name="inbox" />Open actions</span><strong>{data.actionSummary.open}</strong><small>Choose what to do</small></Link>
           </div>
 
           <div className="privacy-grid">
@@ -89,7 +132,7 @@ function DashboardPage() {
             </section>
 
             <section className="privacy-card is-half" aria-labelledby="dashboard-accounts-title">
-              <div className="privacy-section-heading"><div><p>Accounts API</p><h2 id="dashboard-accounts-title">Recently observed services</h2></div><Link to="/accounts">See accounts</Link></div>
+              <div className="privacy-section-heading"><div><p>Recent evidence</p><h2 id="dashboard-accounts-title">Recently observed services</h2></div><Link to="/accounts">See accounts</Link></div>
               {data.accounts.length ? (
                 <ul className="privacy-list">
                   {data.accounts.map((account) => (
@@ -103,7 +146,7 @@ function DashboardPage() {
             </section>
 
             <section className="privacy-card is-half" aria-labelledby="dashboard-identity-title">
-              <div className="privacy-section-heading"><div><p>Identity API</p><h2 id="dashboard-identity-title">Identity relationships</h2></div><Link to="/identity">View graph</Link></div>
+              <div className="privacy-section-heading"><div><p>Identity map</p><h2 id="dashboard-identity-title">Identity relationships</h2></div><Link to="/identity">View graph</Link></div>
               <p>{data.identity.summary.accountCount} account relationships and {data.identity.summary.serviceCount} service relationships are represented in your current graph.</p>
               {data.identity.summary.truncated ? <p className="privacy-note">The visual graph is capped; the Accounts page remains the complete inventory.</p> : null}
               <Link className="privacy-action is-primary" to="/connect">Review mail connections</Link>

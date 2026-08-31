@@ -1,36 +1,40 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import useAuth from '../auth/useAuth.js'
+import WorkspaceIcon from './WorkspaceIcon.jsx'
 import './privacy-workspace.css'
 
 const navigationGroups = [
   {
     label: 'Overview',
     links: [
-      { label: 'Dashboard', to: '/dashboard' },
-      { label: 'Accounts', to: '/accounts' },
-      { label: 'Identity', to: '/identity' },
+      { icon: 'dashboard', label: 'Dashboard', to: '/dashboard' },
     ],
   },
   {
-    label: 'Privacy',
+    label: 'Discover',
     links: [
-      { label: 'Subscriptions', to: '/subscriptions' },
-      { label: 'Breaches', to: '/breaches' },
-      { label: 'Exposures', to: '/exposures' },
-      { label: 'Privacy Health', to: '/privacy-health' },
-      { label: 'Privacy Inbox', to: '/privacy-inbox' },
-      { label: 'Privacy requests', to: '/privacy-requests' },
-      { label: 'Notifications', to: '/notifications' },
+      { icon: 'accounts', label: 'Accounts', to: '/accounts' },
+      { icon: 'identity', label: 'Identity map', to: '/identity' },
+      { icon: 'subscriptions', label: 'Subscriptions', to: '/subscriptions' },
     ],
   },
   {
-    label: 'Connections',
+    label: 'Protect',
     links: [
-      { label: 'Mail connections', to: '/connect' },
-      { label: 'Gmail', to: '/connect/gmail' },
-      { label: 'Microsoft', to: '/connect/microsoft' },
-      { label: 'Settings', to: '/settings' },
+      { icon: 'breaches', label: 'Breaches', to: '/breaches' },
+      { icon: 'exposures', label: 'Exposure review', to: '/exposures' },
+      { icon: 'health', label: 'Privacy health', to: '/privacy-health' },
+      { icon: 'inbox', label: 'Privacy inbox', to: '/privacy-inbox' },
+      { icon: 'requests', label: 'Privacy requests', to: '/privacy-requests' },
+      { icon: 'notifications', label: 'Notifications', to: '/notifications' },
+    ],
+  },
+  {
+    label: 'Manage',
+    links: [
+      { icon: 'connections', label: 'Mail connections', to: '/connect' },
+      { icon: 'settings', label: 'Settings', to: '/settings' },
     ],
   },
 ]
@@ -136,7 +140,10 @@ function PrivacyWorkspace({ children, title }) {
         role={isMobile ? 'dialog' : undefined}
       >
         <div className="privacy-sidebar-brand-row">
-          <NavLink className="privacy-brand" to="/dashboard">OwnTrace</NavLink>
+          <NavLink aria-label="OwnTrace dashboard" className="privacy-brand" to="/dashboard">
+            <span className="privacy-brand-mark" aria-hidden="true"><span /></span>
+            <span><strong>OwnTrace</strong><small>Private workspace</small></span>
+          </NavLink>
           <button aria-label="Close navigation" className="privacy-sidebar-close" onClick={() => closeNavigation()} type="button">×</button>
         </div>
         <nav aria-label="OwnTrace workspace">
@@ -144,7 +151,10 @@ function PrivacyWorkspace({ children, title }) {
             <div className="privacy-nav-group" key={group.label}>
               <p>{group.label}</p>
               {group.links.map((link) => (
-                <NavLink key={link.to} to={link.to}>{link.label}</NavLink>
+                <NavLink key={link.to} to={link.to}>
+                  <WorkspaceIcon className="privacy-nav-icon" name={link.icon} />
+                  <span>{link.label}</span>
+                </NavLink>
               ))}
             </div>
           ))}
