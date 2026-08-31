@@ -85,10 +85,17 @@
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.025);
   text-decoration: none;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
 
 .privacy-metric span { display: block; color: var(--color-text-soft); font-size: 0.7rem; font-weight: 700; }
-.privacy-metric strong { display: block; margin-top: 0.55rem; color: #fff; font-size: 1.8rem; }
+.privacy-metric strong { display: block; margin-top: 0.55rem; color: #fff; font-size: 1.8rem; font-variant-numeric: tabular-nums; }
+
+.privacy-metric:hover {
+  border-color: rgba(139, 255, 176, 0.28);
+  background: rgba(139, 255, 176, 0.045);
+  transform: translateY(-2px);
+}
 
 .privacy-section-heading {
   display: flex;
@@ -100,6 +107,10 @@
 
 .privacy-section-heading > div { display: grid; gap: 0.45rem; }
 .privacy-section-heading a { color: var(--color-accent); font-size: 0.75rem; font-weight: 700; }
+
+.privacy-section-heading a:hover {
+  color: var(--color-accent-strong);
+}
 
 .privacy-list {
   display: grid;
@@ -210,9 +221,38 @@
 .privacy-form button:disabled { opacity: 0.45; cursor: not-allowed; }
 .privacy-pagination span { color: var(--color-text-soft); font-size: 0.7rem; }
 
+.privacy-pagination button:not(:disabled),
+.privacy-action,
+.privacy-form button:not(:disabled) {
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.privacy-pagination button:not(:disabled):hover,
+.privacy-action:hover,
+.privacy-form button:not(:disabled):hover {
+  border-color: rgba(139, 255, 176, 0.34);
+  background: rgba(139, 255, 176, 0.08);
+  transform: translateY(-1px);
+}
+
 .privacy-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.45rem; }
 .privacy-action.is-primary,
 .privacy-form button { color: #07100d; border-color: var(--color-accent); background: var(--color-accent); }
+
+.privacy-action.is-primary:hover,
+.privacy-form button:not(:disabled):hover {
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent-strong);
+}
+
+.privacy-page a:focus-visible,
+.privacy-page button:focus-visible,
+.privacy-page input:focus-visible,
+.privacy-page select:focus-visible,
+.privacy-page textarea:focus-visible {
+  outline: 3px solid var(--color-accent-strong);
+  outline-offset: 3px;
+}
 
 .privacy-score {
   display: grid;
@@ -304,4 +344,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .privacy-spinner { border-color: var(--color-accent); animation: none; }
+
+  .privacy-metric,
+  .privacy-pagination button,
+  .privacy-action,
+  .privacy-form button {
+    transition-duration: 0.01ms;
+  }
 }
