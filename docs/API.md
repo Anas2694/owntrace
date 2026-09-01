@@ -210,7 +210,7 @@ Every endpoint below requires the authenticated `owntrace_session` cookie. List 
 
 `GET /api/subscriptions`
 
-Returns authenticated, user-scoped subscription records created deterministically after completed Gmail or Microsoft metadata scans. Each item includes a `source` of `GMAIL_METADATA` or `MICROSOFT_METADATA`, service identity, `PAYMENT`/`SUBSCRIPTION` evidence basis, confidence, evidence count, optional amount/currency, billing cycle, last payment date, and an explicitly estimated next renewal date. Amounts are integer minor currency units. Ambiguous currency symbols are not converted into amounts, marketing-only messages are excluded, and no detection claims that a subscription is currently active. The existing dashboard and subscriptions page use this single aggregated API.
+Returns authenticated, user-scoped subscription records created deterministically after completed Gmail or Microsoft metadata scans. Each item includes a `source` of `GMAIL_METADATA`, `MICROSOFT_METADATA`, or `MULTI_PROVIDER_METADATA`, service identity, combined `PAYMENT`/`SUBSCRIPTION` evidence basis, recomputed confidence, evidence count, optional amount/currency, billing cycle, last payment date, and an explicitly estimated next renewal date. Amounts are integer minor currency units. Ambiguous currency symbols are not converted into amounts, marketing-only messages are excluded, and no detection claims that a subscription is currently active. The existing dashboard and subscriptions page use this single aggregated API.
 
 ### Breach status and security signals
 
