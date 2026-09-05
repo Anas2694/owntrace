@@ -58,7 +58,7 @@
 .ot-trust-line { display: flex; align-items: center; gap: 0.55rem; margin: 1.25rem 0 0; color: #6a707b; font-size: 0.78rem; }
 .ot-trust-line span { display: grid; width: 1.25rem; height: 1.25rem; place-items: center; border-radius: 50%; color: #1a3a18; background: rgba(185,246,107,0.52); font-weight: 800; }
 
-.ot-hero-instrument { min-width: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); border-radius: 1.2rem; color: white; background: #0b0d12; box-shadow: 0 2rem 5rem rgba(11,13,18,0.2); }
+.ot-hero-instrument { min-width: 0; overflow: hidden; color: white; background: #0b0d12; }
 .ot-instrument-header, .ot-instrument-footer { display: flex; min-height: 3.4rem; align-items: center; justify-content: space-between; gap: 1rem; padding-inline: 1rem; color: rgba(255,255,255,0.62); font-size: 0.67rem; letter-spacing: 0.07em; text-transform: uppercase; }
 .ot-instrument-header { border-bottom: 1px solid rgba(255,255,255,0.1); }
 .ot-instrument-header div, .ot-instrument-footer span { display: flex; align-items: center; gap: 0.55rem; }
