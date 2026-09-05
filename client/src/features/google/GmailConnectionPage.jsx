@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../services/api.js'
 import useAuth from '../auth/useAuth.js'
+import PrivacyWorkspace from '../privacy/PrivacyWorkspace.jsx'
 import './google-connection.css'
 
 const callbackMessages = {
@@ -13,6 +14,8 @@ const callbackMessages = {
   google_refresh_token_missing: 'Google did not provide offline access. Reconnect and approve consent again.',
   google_scope_missing: 'Gmail metadata access was not granted. OwnTrace left the account disconnected.',
   connection_failed: 'Google connection could not be completed. Please try again.',
+  google_account_mismatch: 'Choose the Google account already connected here, or disconnect it before choosing a different account.',
+  google_connection_busy: 'Finish or cancel the current scan before reconnecting Google.',
 }
 
 const syncNotes = {
@@ -91,9 +94,9 @@ function GmailConnectionPage() {
     setSearchParams(nextSearchParams, { replace: true })
   }, [searchParams, setSearchParams])
 
-  async function loadConnection() {
+  const loadConnection = useCallback(async ({ clearError = true } = {}) => {
     setIsLoading(true)
-    setError('')
+    if (clearError) setError('')
 
     try {
       const [connectionResponse, syncResponse] = await Promise.all([
@@ -102,6 +105,7 @@ function GmailConnectionPage() {
       ])
       setGoogleState(connectionResponse.data.google)
       setSync(syncResponse.data.sync)
+      if (syncResponse.data.sync?.status === 'COMPLETED') await restoreSession({ showLoading: false })
     } catch (requestError) {
       setError(
         requestError.response?.data?.message ||
@@ -110,12 +114,14 @@ function GmailConnectionPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [restoreSession])
 
   useEffect(() => {
+    stopSyncRef.current = false
     titleRef.current?.focus()
     loadConnection()
-  }, [])
+    return () => { stopSyncRef.current = true }
+  }, [loadConnection])
 
   async function handleDisconnect() {
     stopSyncRef.current = true
@@ -145,28 +151,31 @@ function GmailConnectionPage() {
     try {
       while (currentSync?.status === 'QUEUED' && !stopSyncRef.current) {
         const response = await api.post('/google/sync/next')
+        if (stopSyncRef.current) return
         currentSync = response.data.sync
         setSync(currentSync)
       }
 
-      await loadConnection()
+      if (!stopSyncRef.current) await loadConnection()
     } catch (requestError) {
       setError(
         requestError.response?.data?.message ||
           'OwnTrace could not continue the metadata scan. Your saved progress is preserved.',
       )
-      await loadConnection()
+      if (!stopSyncRef.current) await loadConnection({ clearError: false })
     } finally {
       setIsSyncing(false)
     }
   }
 
   async function handleStartSync() {
+    stopSyncRef.current = false
     setIsSyncing(true)
     setError('')
 
     try {
       const response = await api.post('/google/sync')
+      if (stopSyncRef.current) return
       setSync(response.data.sync)
       await runSyncBatches(response.data.sync)
     } catch (requestError) {
@@ -196,10 +205,11 @@ function GmailConnectionPage() {
   const isConnected = Boolean(connection)
 
   return (
+    <PrivacyWorkspace title="Gmail">
     <main className="google-page">
       <div className="google-shell">
         <header className="google-header">
-          <Link to="/" className="google-brand">OwnTrace</Link>
+          <Link to="/connect" className="google-brand">All connections</Link>
           <nav aria-label="Google connection">
             {isConnected ? <Link to="/dashboard">Dashboard</Link> : null}
             <Link to="/onboarding">Review privacy setup</Link>
@@ -209,10 +219,10 @@ function GmailConnectionPage() {
         <section className="google-intro" aria-labelledby="google-title">
           <p className="google-eyebrow">Google connection</p>
           <h1 ref={titleRef} id="google-title" tabIndex="-1">
-            Connect Gmail with clear boundaries.
+            Find account clues in Gmail.
           </h1>
           <p>
-            OwnTrace requests metadata access for account discovery—not permission to send,
+            OwnTrace requests metadata access for account discovery, not permission to send,
             modify, or delete mail. Google will show the exact consent request before access.
           </p>
         </section>
@@ -248,7 +258,7 @@ function GmailConnectionPage() {
           <div className="google-actions">
             {isConnected ? (
               <>
-                <a className="google-provider-action" href="/api/google/oauth/start"><GoogleMark />Continue with Google</a>
+                {!isSyncing && !isDisconnecting ? <a className="google-provider-action" href="/api/google/oauth/start"><GoogleMark />Reconnect Google</a> : null}
                 <button type="button" onClick={handleDisconnect} disabled={isDisconnecting}>
                   {isDisconnecting ? 'Disconnecting…' : 'Disconnect Google'}
                 </button>
@@ -276,7 +286,7 @@ function GmailConnectionPage() {
                 OwnTrace checks up to {googleState.syncPolicy.messageLimit?.toLocaleString() || 'the configured limit'}
                 {' '}email metadata records per scan, {googleState.syncPolicy.batchSize} at a time, and can
                 finish sooner when no more results remain. It safely deduplicates messages already seen.
-                A saved clue represents one message—not one discovered account.
+                A saved clue represents one message, not one discovered account. The scan stops when it reaches this limit or runs out of results.
               </p>
             </div>
             <dl>
@@ -290,26 +300,27 @@ function GmailConnectionPage() {
             ) : null}
             <div className="google-actions google-sync-actions">
               {sync?.status === 'COMPLETED' ? (
-                <Link className="google-primary-action" to="/dashboard">View dashboard</Link>
+                <Link className="google-primary-action" to="/accounts">Review discovered accounts</Link>
               ) : null}
               {sync?.status === 'QUEUED' && !isSyncing ? (
-                <button className="google-primary-action" type="button" onClick={() => runSyncBatches(sync)}>
+                <button className="google-primary-action" type="button" disabled={isDisconnecting || connection.status === 'NEEDS_RECONNECT'} onClick={() => runSyncBatches(sync)}>
                   Resume scan
                 </button>
               ) : (
-                <button className="google-primary-action" type="button" onClick={handleStartSync} disabled={isSyncing}>
+                <button className="google-primary-action" type="button" onClick={handleStartSync} disabled={isSyncing || isDisconnecting || ['SCANNING', 'PROCESSING'].includes(sync?.status) || connection.status === 'NEEDS_RECONNECT'}>
                   {isSyncing ? 'Scanning metadata…' : sync?.status === 'COMPLETED' ? 'Check for newer messages' : 'Start metadata scan'}
                 </button>
               )}
-              {isSyncing ? <button type="button" onClick={handleCancelSync}>Cancel scan</button> : null}
+              {['QUEUED', 'SCANNING', 'PROCESSING'].includes(sync?.status) ? <button type="button" disabled={isDisconnecting} onClick={handleCancelSync}>Cancel scan</button> : null}
+              {!isSyncing ? <button type="button" onClick={() => loadConnection()}>Refresh status</button> : null}
             </div>
           </section>
         ) : null}
 
-        <section className="google-capabilities" aria-labelledby="capabilities-title">
+        <details className="google-capabilities">
+          <summary>Permissions, evidence, and limitations</summary>
           <div className="google-capabilities-heading">
-            <p className="google-eyebrow">Provider capability map</p>
-            <h2 id="capabilities-title">What OwnTrace knows—and what it does not.</h2>
+            <h2 id="capabilities-title">What this connection can show</h2>
             <p>
               Connection facts come from Google OAuth. Account relationships remain OwnTrace
               inferences. Provider-wide app permissions stay with Google.
@@ -341,7 +352,7 @@ function GmailConnectionPage() {
               </a>
             </article>
           </div>
-        </section>
+        </details>
 
         <section className="google-boundaries" aria-labelledby="boundaries-title">
           <div><p className="google-eyebrow">Before you connect</p><h2 id="boundaries-title">What this permission means</h2></div>
@@ -353,6 +364,7 @@ function GmailConnectionPage() {
         </section>
       </div>
     </main>
+    </PrivacyWorkspace>
   )
 }
 

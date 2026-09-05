@@ -5,6 +5,8 @@ import AccountEvidence from '../src/models/account-evidence.model.js'
 import Account from '../src/models/account.model.js'
 import GmailSignal from '../src/models/gmail-signal.model.js'
 import GoogleConnection from '../src/models/google-connection.model.js'
+import MicrosoftConnection from '../src/models/microsoft-connection.model.js'
+import MicrosoftSignal from '../src/models/microsoft-signal.model.js'
 import User from '../src/models/user.model.js'
 import {
   classifyEvidence,
@@ -214,6 +216,60 @@ describe('account discovery', () => {
     expect(await Account.countDocuments({ userId: secondUser.id })).toBe(1)
     expect(await AccountAction.countDocuments({ userId: secondUser.id })).toBeGreaterThan(0)
     expect(await AccountEvidence.countDocuments({ userId: secondUser.id })).toBe(1)
+  })
+
+  it('combines both mail providers idempotently and preserves Gmail evidence after Microsoft cleanup', async () => {
+    const user = await createUser('dual-provider@example.com')
+    const gmailConnection = await createConnection(user.id, 'dual-google-account')
+    const microsoftConnection = await MicrosoftConnection.create({
+      email: 'dual-provider@outlook.example',
+      encryptedAccessToken: 'v1.test.test.test',
+      encryptedRefreshToken: 'v1.test.test.test',
+      microsoftAccountId: 'dual-microsoft-account',
+      scopes: ['Mail.ReadBasic'],
+      tokenExpiresAt: new Date(Date.now() + 3_600_000),
+      userId: user.id,
+    })
+    await Promise.all([
+      createSignal({
+        connectionId: gmailConnection.id,
+        index: 1,
+        occurredAt: new Date('2026-01-01T00:00:00Z'),
+        senderDomain: 'accounts.github.com',
+        subjectSignal: 'Verify your account email',
+        userId: user.id,
+      }),
+      MicrosoftSignal.create({
+        connectionId: microsoftConnection.id,
+        messageIdHash: 'dual-microsoft-message',
+        occurredAt: new Date('2026-02-01T00:00:00Z'),
+        senderDomain: 'security.github.com',
+        senderEmail: 'security@github.com',
+        subjectSignal: 'New sign-in detected',
+        threadIdHash: 'dual-microsoft-thread',
+        userId: user.id,
+      }),
+    ])
+
+    expect(await discoverAccountsForUser(user.id)).toEqual({
+      accountCount: 1,
+      evidenceCount: 2,
+      processedSignalCount: 2,
+    })
+    expect(await discoverAccountsForUser(user.id)).toEqual({
+      accountCount: 1,
+      evidenceCount: 2,
+      processedSignalCount: 2,
+    })
+    const combinedEvidence = await AccountEvidence.find({ userId: user.id }).select('+connectionProvider').lean()
+    expect(combinedEvidence.map((item) => item.connectionProvider).sort()).toEqual(['GOOGLE', 'MICROSOFT'])
+
+    await removeConnectionDiscoveries(user.id, microsoftConnection.id)
+
+    const remainingAccount = await Account.findOne({ userId: user.id }).lean()
+    expect(remainingAccount).toMatchObject({ evidenceCount: 1, serviceKey: 'github.com' })
+    expect(await AccountEvidence.countDocuments({ connectionId: gmailConnection.id, userId: user.id })).toBe(1)
+    expect(await AccountEvidence.countDocuments({ connectionId: microsoftConnection.id, userId: user.id })).toBe(0)
   })
 
   it('rejects invalid account evidence references at the model boundary', async () => {

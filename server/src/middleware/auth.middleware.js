@@ -14,8 +14,8 @@ async function requireAuth(request, _response, next) {
 
   try {
     payload = await verifyActiveSession(token)
-  } catch {
-    return next(new AppError('Your session is invalid or has expired.', 401, 'INVALID_SESSION'))
+  } catch (error) {
+    return next(error)
   }
 
   const user = await User.findById(payload.sub)

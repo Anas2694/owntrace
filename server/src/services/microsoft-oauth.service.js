@@ -79,6 +79,9 @@ async function completeAuthorization({ code, cookieState, requestState, userId }
     throw error
   }
   const existingConnection = await MicrosoftConnection.findOne({ userId }).select('+encryptedRefreshToken')
+  if (['SYNCING', 'DISCONNECTING'].includes(existingConnection?.status)) {
+    throw new AppError('Stop the current scan or finish disconnecting before reconnecting.', 409, 'MICROSOFT_CONNECTION_BUSY')
+  }
   const encryptedRefreshToken = typeof token.refresh_token === 'string' ? encryptSecret(token.refresh_token) : existingConnection?.encryptedRefreshToken
   if (typeof token.access_token !== 'string' || !encryptedRefreshToken || !validExpiry(token.expires_in)) throw new AppError('Microsoft did not provide offline access. Reconnect and approve consent again.', 409, 'MICROSOFT_REFRESH_TOKEN_MISSING')
   let profile
@@ -93,8 +96,7 @@ async function completeAuthorization({ code, cookieState, requestState, userId }
   const scopes = typeof token.scope === 'string' ? token.scope.split(/\s+/).filter(Boolean) : MICROSOFT_SCOPES
   if (!scopes.includes('Mail.ReadBasic')) throw new AppError('Microsoft did not grant basic mail metadata permission.', 409, 'MICROSOFT_SCOPE_MISSING')
   if (existingConnection?.microsoftAccountId && existingConnection.microsoftAccountId !== profile.id) {
-    await removeConnectionDiscoveries(userId, existingConnection.id)
-    await Promise.all([MicrosoftSignal.deleteMany({ connectionId: existingConnection.id, userId }), MicrosoftSyncJob.deleteMany({ connectionId: existingConnection.id, userId }), removeMicrosoftSubscriptionsForUser(userId)])
+    throw new AppError('Disconnect the current Microsoft account before connecting a different one.', 409, 'MICROSOFT_ACCOUNT_MISMATCH')
   }
   const connection = await MicrosoftConnection.findOneAndUpdate({ userId }, { $set: { connectedAt: existingConnection?.connectedAt || new Date(), email: email.trim().toLowerCase(), encryptedAccessToken: encryptSecret(token.access_token), encryptedRefreshToken, microsoftAccountId: profile.id, scopes, status: 'CONNECTED', lastErrorCode: null, tokenExpiresAt: new Date(Date.now() + Number(token.expires_in) * 1000) } }, { returnDocument: 'after', runValidators: true, upsert: true })
   await User.updateOne({ _id: userId }, { $addToSet: { authProviders: 'microsoft' } })
@@ -108,7 +110,7 @@ async function refreshAccessToken(userId, connection) {
   if (existing) return existing
   const refresh = (async () => {
     const current = await getConnectionForUser(userId, true)
-    if (!current || current.status === 'NEEDS_RECONNECT') throw new AppError('Reconnect Microsoft before starting a scan.', 409, 'MICROSOFT_RECONNECT_REQUIRED')
+    if (!current || ['NEEDS_RECONNECT', 'DISCONNECTING'].includes(current.status)) throw new AppError('Reconnect Microsoft before starting a scan.', 409, 'MICROSOFT_RECONNECT_REQUIRED')
     if (current.tokenExpiresAt > new Date(Date.now() + 60_000)) return { accessToken: decryptSecret(current.encryptedAccessToken), connection: current }
     const config = getMicrosoftConfig()
     try {
@@ -135,6 +137,7 @@ async function refreshAccessToken(userId, connection) {
 async function withMicrosoftAccessToken(userId, callback) {
   let connection = await getConnectionForUser(userId, true)
   if (!connection) throw new AppError('Connect Microsoft before starting a scan.', 409, 'MICROSOFT_NOT_CONNECTED')
+  if (connection.status === 'DISCONNECTING') throw new AppError('Microsoft is disconnecting. Try again shortly.', 409, 'MICROSOFT_DISCONNECT_IN_PROGRESS')
   if (connection.status === 'NEEDS_RECONNECT') throw new AppError('Reconnect Microsoft before starting a scan.', 409, 'MICROSOFT_RECONNECT_REQUIRED')
   let accessToken = decryptSecret(connection.encryptedAccessToken)
   if (connection.tokenExpiresAt <= new Date(Date.now() + 60_000)) ({ accessToken, connection } = await refreshAccessToken(userId, connection))

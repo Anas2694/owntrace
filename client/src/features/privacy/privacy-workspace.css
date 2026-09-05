@@ -57,12 +57,12 @@
 
 .privacy-nav-group a {
   display: flex;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   align-items: center;
   padding: 0.55rem 0.75rem;
   border-radius: 0.65rem;
   color: var(--color-text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   font-weight: 690;
   text-decoration: none;
 }
@@ -143,10 +143,19 @@
 }
 
 .privacy-sidebar a:focus-visible,
+.privacy-sidebar summary:focus-visible,
 .privacy-sidebar button:focus-visible,
 .privacy-mobile-header button:focus-visible {
   outline: 3px solid var(--color-accent-strong);
   outline-offset: 2px;
+}
+
+.privacy-more-tools summary {
+  min-height: 2.75rem;
+  padding: 0.7rem 0.75rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 48rem) {

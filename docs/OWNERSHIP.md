@@ -25,12 +25,12 @@ Ownership follows the feature end to end, including its frontend, backend, data 
 - Privacy inbox
 - Privacy requests
 - Notifications
-- Microsoft integration later
+- Microsoft integration
 - Mobile later
 
 Cross-feature changes should be agreed in pull requests before implementation.
 
-Microsoft metadata currently contributes to Raphael-owned subscription projections and dashboard totals. Provider-neutral account discovery, identity graph, and account-action evidence remain Anas-owned shared-platform work and require an agreed contract before Microsoft signals feed those APIs.
+Microsoft integration owns its OAuth connection, minimized metadata signals, sync lifecycle, and provider-specific subscription projection. Microsoft metadata feeds the shared provider-neutral account discovery, identity graph, account-action, subscription, and dashboard APIs through their documented contracts.
 
 ## User-deletion contract
 

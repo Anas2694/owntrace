@@ -3,6 +3,7 @@ import axios from 'axios'
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   withCredentials: true,
+  timeout: 60_000,
 })
 
 const SESSION_ENDED_EVENT = 'owntrace:session-ended'

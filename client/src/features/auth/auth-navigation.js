@@ -6,7 +6,7 @@ function getDefaultAuthenticatedRoute(user) {
 
 function canAccessAuthenticatedRoute(user, pathname) {
   if (user?.onboardingStatus === 'COMPLETED') return true
-  if (pathname === '/onboarding') return true
+  if (['/onboarding', '/settings'].includes(pathname)) return true
   return ['/connect', '/connect/gmail', '/connect/microsoft'].includes(pathname)
     && ['GMAIL_PENDING', 'SCAN_PENDING'].includes(user?.onboardingStatus)
 }

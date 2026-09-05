@@ -11,7 +11,7 @@ These provisional objectives are calibrated for a small, single-instance beta an
 - Recovery time objective (RTO): 4 hours
 - Supported browsers: current Chrome, Edge, Firefox, and Safari; responsive web from 320 px upward
 
-Google and XposedOrNot response time and availability are external dependencies and should be reported separately from OwnTrace API latency.
+Google, Microsoft, and XposedOrNot response time and availability are external dependencies and should be reported separately from OwnTrace API latency.
 
 ## Signals and alerts
 
@@ -23,6 +23,7 @@ Configure the hosting platform to collect JSON logs and retain only the period a
 - container restart loops or memory/CPU saturation
 - MongoDB connection, storage, backup, or restore failures
 - repeated Google reconnect/rate-limit errors above the expected beta baseline
+- repeated Microsoft reconnect/rate-limit errors above the expected beta baseline
 - approaching XposedOrNot free-provider limits
 
 Logs contain `event`, `timestamp`, `requestId`, method, path, status, and duration where applicable. They must not ingest request/response bodies, cookies, query strings, authorization data, provider tokens, email addresses, Gmail subject data, or IP addresses.
@@ -36,10 +37,11 @@ Use dedicated test accounts and never a real production user's mailbox:
 3. Registration, logout, old-cookie replay rejection, login, and session restoration work.
 4. Google consent requests exactly `openid`, `email`, and `gmail.metadata`.
 5. Gmail scan completes, progress resumes, repeated sync remains idempotent, and no email body is stored or logged.
-6. Account and subscription detections are labeled as inferences; dashboard routes load without console errors.
-7. A consented breach check succeeds or returns a safe bounded provider error.
-8. Google disconnect revokes and deletes derived data; account deletion removes all user-scoped active records.
-9. Keyboard, reduced-motion, 390/768/1440 px layouts, and horizontal-overflow checks pass.
+6. When Microsoft is configured, consent requests exactly `openid`, `profile`, `email`, `offline_access`, `User.Read`, and `Mail.ReadBasic`; its scan and repeated-sync checks pass without reading bodies or attachments.
+7. Account and subscription detections are labeled as inferences; single-provider and dual-provider dashboard routes load without console errors.
+8. A consented breach check succeeds or returns a safe bounded provider error.
+9. Provider disconnect removes its local derived data; Google revocation is confirmed when available; account deletion removes all user-scoped active records.
+10. Keyboard, reduced-motion, 390/768/1440 px layouts, and horizontal-overflow checks pass.
 
 ## Incident response
 

@@ -467,7 +467,7 @@ describe('authentication API', () => {
 
       const unsupported = await agent
         .patch('/api/onboarding')
-        .send({ status: 'COMPLETED' })
+        .send({ status: 'NOT_A_STATUS' })
         .expect(400)
       const outOfOrder = await agent
         .patch('/api/onboarding')
@@ -476,6 +476,19 @@ describe('authentication API', () => {
 
       expect(unsupported.body.code).toBe('INVALID_ONBOARDING_STATUS')
       expect(outOfOrder.body.code).toBe('ONBOARDING_STEP_OUT_OF_ORDER')
+      await agent.patch('/api/onboarding').send({ status: 'COMPLETED' }).expect(409)
+    })
+
+    it('lets a user finish reviewed setup without connecting a provider', async () => {
+      const agent = request.agent(app)
+      await agent.post('/api/auth/register').send(validRegistration).expect(201)
+      await agent.patch('/api/onboarding').send({ status: 'PRIVACY_REVIEWED' }).expect(200)
+      await agent.patch('/api/onboarding').send({ status: 'GMAIL_PENDING' }).expect(200)
+      await agent.patch('/api/onboarding').send({ status: 'COMPLETED' }).expect(200)
+      const { body } = await agent.get('/api/auth/session').expect(200)
+      expect(body.user.onboardingStatus).toBe('COMPLETED')
+      expect(await GoogleConnection.countDocuments()).toBe(0)
+      expect(await MicrosoftConnection.countDocuments()).toBe(0)
     })
   })
 

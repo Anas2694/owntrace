@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import api from '../../services/api.js'
-import WorkspaceHeader from '../workspace/WorkspaceHeader.jsx'
 import './account-settings.css'
 
 function AccountSettingsPage() {
@@ -37,7 +36,6 @@ function AccountSettingsPage() {
   return (
     <main className="settings-page">
       <div className="settings-shell">
-        <WorkspaceHeader />
 
         <section className="settings-intro" aria-labelledby="settings-title">
           <div>

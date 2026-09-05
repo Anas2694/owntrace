@@ -60,7 +60,7 @@ microsoftRouter.get('/oauth/callback', async (request, response) => {
       requestId: request.requestId,
       stage: error?.microsoftStage || 'authorization_completion',
     })
-    const safeCode = ['INVALID_OAUTH_STATE', 'OAUTH_USER_MISMATCH', 'MICROSOFT_REFRESH_TOKEN_MISSING', 'MICROSOFT_SCOPE_MISSING'].includes(error.code)
+    const safeCode = ['INVALID_OAUTH_STATE', 'OAUTH_USER_MISMATCH', 'MICROSOFT_REFRESH_TOKEN_MISSING', 'MICROSOFT_SCOPE_MISSING', 'MICROSOFT_CONNECTION_BUSY', 'MICROSOFT_ACCOUNT_MISMATCH'].includes(error.code)
       ? error.code.toLowerCase()
       : 'connection_failed'
     return response.redirect(`${clientUrl}/connect/microsoft?microsoft=${safeCode}`)
@@ -84,7 +84,7 @@ microsoftRouter.post('/sync', async (request, response) => {
 })
 microsoftRouter.post('/sync/next', async (request, response) => {
   const sync = await processNextBatch(request.auth.userId)
-  response.status(200).json({ success: true, sync: sync.toJSON() })
+  response.status(200).json({ success: true, sync: sync ? sync.toJSON() : null })
 })
 microsoftRouter.delete('/sync', async (request, response) => {
   const sync = await cancelAndWaitForSync(request.auth.userId)

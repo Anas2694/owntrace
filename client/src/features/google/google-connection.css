@@ -502,3 +502,5 @@
     width: 100%;
   }
 }
+.google-capabilities summary { min-height: 2.75rem; padding-block: 1rem; color: var(--color-text); font-weight: 650; cursor: pointer; }
+.google-capabilities summary:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 3px; }

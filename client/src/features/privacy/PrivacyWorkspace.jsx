@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import useAuth from '../auth/useAuth.js'
+import { canAccessAuthenticatedRoute, getDefaultAuthenticatedRoute } from '../auth/auth-navigation.js'
 import './privacy-workspace.css'
 
 const navigationGroups = [
@@ -9,7 +10,7 @@ const navigationGroups = [
     links: [
       { label: 'Dashboard', to: '/dashboard' },
       { label: 'Accounts', to: '/accounts' },
-      { label: 'Identity', to: '/identity' },
+      { label: 'Actions', to: '/privacy-inbox' },
     ],
   },
   {
@@ -17,22 +18,23 @@ const navigationGroups = [
     links: [
       { label: 'Subscriptions', to: '/subscriptions' },
       { label: 'Breaches', to: '/breaches' },
-      { label: 'Exposures', to: '/exposures' },
-      { label: 'Privacy Health', to: '/privacy-health' },
-      { label: 'Privacy Inbox', to: '/privacy-inbox' },
-      { label: 'Privacy requests', to: '/privacy-requests' },
-      { label: 'Notifications', to: '/notifications' },
     ],
   },
   {
     label: 'Connections',
     links: [
       { label: 'Mail connections', to: '/connect' },
-      { label: 'Gmail', to: '/connect/gmail' },
-      { label: 'Microsoft', to: '/connect/microsoft' },
       { label: 'Settings', to: '/settings' },
     ],
   },
+]
+
+const moreTools = [
+  { label: 'Identity map', to: '/identity' },
+  { label: 'Exposures', to: '/exposures' },
+  { label: 'Privacy health', to: '/privacy-health' },
+  { label: 'Privacy requests', to: '/privacy-requests' },
+  { label: 'Notifications', to: '/notifications' },
 ]
 
 function useMobileLayout() {
@@ -71,8 +73,8 @@ function PrivacyWorkspace({ children, title }) {
   useEffect(() => {
     if (!isMobile || !isOpen) return undefined
     const sidebar = sidebarRef.current
-    const focusable = sidebar?.querySelectorAll('a[href], button:not([disabled])') || []
-    focusable[0]?.focus()
+    const getFocusable = () => [...(sidebar?.querySelectorAll('a[href], button:not([disabled]), summary') || [])].filter((element) => element.getClientRects().length)
+    getFocusable()[0]?.focus()
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
@@ -82,6 +84,7 @@ function PrivacyWorkspace({ children, title }) {
         closeNavigation()
         return
       }
+      const focusable = getFocusable()
       if (event.key !== 'Tab' || !focusable.length) return
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
@@ -123,6 +126,7 @@ function PrivacyWorkspace({ children, title }) {
           className="privacy-navigation-backdrop"
           onClick={() => closeNavigation()}
           type="button"
+          tabIndex={-1}
         />
       ) : null}
       <aside
@@ -136,11 +140,11 @@ function PrivacyWorkspace({ children, title }) {
         role={isMobile ? 'dialog' : undefined}
       >
         <div className="privacy-sidebar-brand-row">
-          <NavLink className="privacy-brand" to="/dashboard">OwnTrace</NavLink>
+          <NavLink className="privacy-brand" to={getDefaultAuthenticatedRoute(user)}>OwnTrace</NavLink>
           <button aria-label="Close navigation" className="privacy-sidebar-close" onClick={() => closeNavigation()} type="button">×</button>
         </div>
         <nav aria-label="OwnTrace workspace">
-          {navigationGroups.map((group) => (
+          {navigationGroups.map((group) => ({ ...group, links: group.links.filter((link) => canAccessAuthenticatedRoute(user, link.to)) })).filter((group) => group.links.length).map((group) => (
             <div className="privacy-nav-group" key={group.label}>
               <p>{group.label}</p>
               {group.links.map((link) => (
@@ -148,6 +152,12 @@ function PrivacyWorkspace({ children, title }) {
               ))}
             </div>
           ))}
+          {user?.onboardingStatus === 'COMPLETED' ? (
+            <details className="privacy-nav-group privacy-more-tools" open={moreTools.some((link) => link.to === location.pathname) || undefined}>
+              <summary>More tools</summary>
+              {moreTools.map((link) => <NavLink key={link.to} to={link.to}>{link.label}</NavLink>)}
+            </details>
+          ) : <NavLink to="/onboarding">Continue setup</NavLink>}
         </nav>
         <div className="privacy-sidebar-account">
           <span aria-hidden="true">{initial}</span>
@@ -159,7 +169,7 @@ function PrivacyWorkspace({ children, title }) {
         {logoutError ? <p className="privacy-sidebar-error" role="alert">{logoutError}</p> : null}
       </aside>
 
-      <div className="privacy-workspace-frame">
+      <div className="privacy-workspace-frame" inert={isMobile && isOpen ? true : undefined}>
         <header className="privacy-mobile-header">
           <button
             aria-controls="owntrace-privacy-sidebar"
@@ -169,7 +179,7 @@ function PrivacyWorkspace({ children, title }) {
             ref={menuButtonRef}
             type="button"
           >
-            <span aria-hidden="true">☰</span>
+            Menu
           </button>
           <strong>{title}</strong>
           <span aria-hidden="true">{initial}</span>

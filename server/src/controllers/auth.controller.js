@@ -79,7 +79,8 @@ async function session(request, response) {
 
   try {
     payload = await verifyActiveSession(token)
-  } catch {
+  } catch (error) {
+    if (!(error instanceof AppError) || error.code !== 'INVALID_SESSION') throw error
     clearSessionCookie(response)
     response.status(200).json({ success: true, user: null })
     return

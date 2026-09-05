@@ -5,6 +5,7 @@ import { formatEnum } from './privacy-format.js'
 
 function PrivacyInboxPage() {
   const [page, setPage] = useState(1)
+  const [statusFilter, setStatusFilter] = useState('OPEN')
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState('')
@@ -12,12 +13,13 @@ function PrivacyInboxPage() {
 
   const loadInbox = useCallback((signal) => {
     setError('')
-    return api.get('/account-actions', { params: { limit: 12, page, status: 'OPEN' }, signal })
+    setResult(null)
+    return api.get('/account-actions', { params: { limit: 12, page, status: statusFilter }, signal })
       .then((response) => setResult(response.data))
       .catch((requestError) => {
         if (requestError.code !== 'ERR_CANCELED') setError(requestError.response?.data?.message || 'OwnTrace could not load the Privacy Inbox.')
       })
-  }, [page])
+  }, [page, statusFilter])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -30,6 +32,7 @@ function PrivacyInboxPage() {
     setError('')
     try {
       await api.patch(`/account-actions/${actionId}`, { status })
+      setPage(1)
       setRefreshKey((value) => value + 1)
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'OwnTrace could not update this action.')
@@ -40,32 +43,37 @@ function PrivacyInboxPage() {
 
   return (
     <PrivacyPageLayout
-      description="A global workspace view over the real account-action API. Every recommendation is derived from minimized OwnTrace account evidence and remains scoped to your user."
-      eyebrow="Privacy Inbox"
-      title="Turn account evidence into clear next steps."
+      description="Review suggestions, record your progress, and return to unfinished tasks."
+      eyebrow="Actions"
+      title="Take the next step on your terms."
     >
       <p className="privacy-note">OwnTrace does not perform third-party account changes. Complete each step through the service’s official settings, then record your progress here.</p>
-      {error ? <ErrorState>{error}</ErrorState> : null}
+      <label className="privacy-filter-label">Show actions
+        <select value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value) }}>
+          <option value="OPEN">To review</option><option value="IN_PROGRESS">In progress</option><option value="COMPLETED">Completed</option><option value="DISMISSED">Dismissed</option>
+        </select>
+      </label>
+      {error ? <><ErrorState>{error}</ErrorState><button className="privacy-action" onClick={() => setRefreshKey((value) => value + 1)} type="button">Retry actions</button></> : null}
       {!result && !error ? <LoadingState>Preparing your Privacy Inbox…</LoadingState> : null}
       {result?.actions.length ? (
         <section className="privacy-card" aria-labelledby="privacy-inbox-list-title">
-          <div className="privacy-section-heading"><div><p>Open recommendations</p><h2 id="privacy-inbox-list-title">Actions to review</h2></div><StatusPill>{result.pagination.total} open</StatusPill></div>
+          <div className="privacy-section-heading"><h2 id="privacy-inbox-list-title">{formatEnum(statusFilter)}</h2><StatusPill>{result.pagination.total} actions</StatusPill></div>
           <ul className="privacy-list">
             {result.actions.map((action) => (
               <li className="privacy-list-item" key={action.id}>
                 <div><strong>{action.title}</strong><p>{action.description}</p><small>{action.account?.serviceName || 'Account evidence'} · {action.reason}</small></div>
                 <div className="privacy-actions">
                   <StatusPill tone={action.priority.toLowerCase()}>{formatEnum(action.priority)}</StatusPill>
-                  <button className="privacy-action is-primary" disabled={busyId === action.id} onClick={() => updateStatus(action.id, 'IN_PROGRESS')} type="button">Start</button>
-                  <button className="privacy-action" disabled={busyId === action.id} onClick={() => updateStatus(action.id, 'COMPLETED')} type="button">Complete</button>
-                  <button className="privacy-action" disabled={busyId === action.id} onClick={() => updateStatus(action.id, 'DISMISSED')} type="button">Dismiss</button>
+                  {statusFilter === 'OPEN' ? <button className="privacy-action is-primary" disabled={Boolean(busyId)} onClick={() => updateStatus(action.id, 'IN_PROGRESS')} type="button">Start</button> : null}
+                  {['OPEN', 'IN_PROGRESS'].includes(statusFilter) ? <><button className="privacy-action" disabled={Boolean(busyId)} onClick={() => updateStatus(action.id, 'COMPLETED')} type="button">Mark completed</button><button className="privacy-action" disabled={Boolean(busyId)} onClick={() => updateStatus(action.id, 'DISMISSED')} type="button">Dismiss</button></> : null}
+                  {statusFilter !== 'OPEN' ? <button className="privacy-action" disabled={Boolean(busyId)} onClick={() => updateStatus(action.id, 'OPEN')} type="button">Return to review</button> : null}
                 </div>
               </li>
             ))}
           </ul>
           <Pagination label="Privacy Inbox pages" onPageChange={setPage} pagination={result.pagination} />
         </section>
-      ) : result ? <EmptyState title="No open privacy actions">Current account evidence does not produce an open recommendation.</EmptyState> : null}
+      ) : result ? <EmptyState title="No actions in this view">Choose another status to find your other actions.</EmptyState> : null}
     </PrivacyPageLayout>
   )
 }

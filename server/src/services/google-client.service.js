@@ -55,6 +55,10 @@ async function withGoogleClient(userId, operation) {
     throw new AppError('Connect Gmail before starting a scan.', 409, 'GOOGLE_NOT_CONNECTED')
   }
 
+  if (connection.status === 'DISCONNECTING') {
+    throw new AppError('Google is disconnecting.', 409, 'GOOGLE_DISCONNECT_IN_PROGRESS')
+  }
+
   if (!connection.encryptedRefreshToken) {
     await GoogleConnection.updateOne(
       { _id: connection.id, userId },
@@ -88,7 +92,7 @@ async function withGoogleClient(userId, operation) {
 
     if (safeError.code === 'GOOGLE_RECONNECT_REQUIRED') {
       await GoogleConnection.updateOne(
-        { _id: connection.id, userId },
+        { _id: connection.id, userId, status: { $ne: 'DISCONNECTING' } },
         { $set: { status: 'NEEDS_RECONNECT', lastErrorCode: safeError.code } },
       )
     }

@@ -5,6 +5,7 @@ import app from '../src/app.js'
 import AccountEvidence from '../src/models/account-evidence.model.js'
 import Account from '../src/models/account.model.js'
 import GoogleConnection from '../src/models/google-connection.model.js'
+import MicrosoftConnection from '../src/models/microsoft-connection.model.js'
 import User from '../src/models/user.model.js'
 
 async function registerUser(email, name = 'Identity Test User') {
@@ -138,6 +139,42 @@ describe('identity graph API', () => {
       target: `account:${account.id}`,
       type: 'HAS_ACCOUNT_EVIDENCE',
     }))
+  })
+
+  it('shows both connected provider identities without exposing provider credentials', async () => {
+    const owner = await registerUser('identity-dual@example.com', 'Dual Identity Owner')
+    await Promise.all([
+      GoogleConnection.create({
+        email: 'identity-dual@gmail.example',
+        encryptedAccessToken: 'v1.google.private.access',
+        encryptedRefreshToken: 'v1.google.private.refresh',
+        googleAccountId: 'private-google-account-id',
+        scopes: ['https://www.googleapis.com/auth/gmail.metadata'],
+        tokenExpiresAt: new Date(Date.now() + 3_600_000),
+        userId: owner.userId,
+      }),
+      MicrosoftConnection.create({
+        email: 'identity-dual@outlook.example',
+        encryptedAccessToken: 'v1.microsoft.private.access',
+        encryptedRefreshToken: 'v1.microsoft.private.refresh',
+        microsoftAccountId: 'private-microsoft-account-id',
+        scopes: ['Mail.ReadBasic'],
+        tokenExpiresAt: new Date(Date.now() + 3_600_000),
+        userId: owner.userId,
+      }),
+    ])
+
+    const response = await owner.agent.get('/api/identity').expect(200)
+    const serialized = JSON.stringify(response.body)
+    expect(response.body.graph.summary.connectedIdentityCount).toBe(2)
+    expect(response.body.graph.nodes.map((node) => node.type)).toEqual(expect.arrayContaining([
+      'GOOGLE_IDENTITY',
+      'MICROSOFT_IDENTITY',
+    ]))
+    expect(serialized).not.toContain('private-google-account-id')
+    expect(serialized).not.toContain('private-microsoft-account-id')
+    expect(serialized).not.toContain('v1.google.private')
+    expect(serialized).not.toContain('v1.microsoft.private')
   })
 
   it('reports full counts while bounding the visual graph to 200 accounts', async () => {
