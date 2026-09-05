@@ -95,7 +95,6 @@ function LandingPage() {
                 <Suspense fallback={<div className="identity-core-shell is-loading" aria-hidden="true" />}><IdentityCore3D /></Suspense>
                 <span className="ot-scene-label ot-scene-label-a">FOUR REVIEW AREAS <b>CONNECTED BY EVIDENCE</b></span>
                 <span className="ot-scene-label ot-scene-label-b">BODY CONTENT <b>NOT STORED</b></span>
-                <div className="ot-identity-core-label" aria-hidden="true"><strong>YOUR<br />IDENTITY</strong><span>evidence in context</span></div>
               </div>
             </div>
           </div>

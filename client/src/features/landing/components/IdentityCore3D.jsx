@@ -82,6 +82,26 @@ function IdentityCore3D() {
     privateCore.position.set(0, 0.08, 0.34)
     identityGroup.add(privateCore)
 
+    const identityLabelCanvas = document.createElement('canvas')
+    identityLabelCanvas.width = 512
+    identityLabelCanvas.height = 180
+    const identityLabelContext = identityLabelCanvas.getContext('2d')
+    identityLabelContext.textAlign = 'center'
+    identityLabelContext.fillStyle = '#f7f9fc'
+    identityLabelContext.font = '700 42px Arial'
+    identityLabelContext.fillText('YOUR IDENTITY', 256, 76)
+    identityLabelContext.fillStyle = '#b9f66b'
+    identityLabelContext.font = '400 22px Arial'
+    identityLabelContext.fillText('evidence in context', 256, 120)
+    const identityLabelTexture = new THREE.CanvasTexture(identityLabelCanvas)
+    identityLabelTexture.colorSpace = THREE.SRGBColorSpace
+    identityLabelTexture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy())
+    const identityLabelMaterial = new THREE.SpriteMaterial({ map: identityLabelTexture, transparent: true, depthTest: false })
+    const identityLabel = new THREE.Sprite(identityLabelMaterial)
+    identityLabel.position.set(0, 0.08, 0.5)
+    identityLabel.scale.set(1.22, 0.43, 1)
+    identityGroup.add(identityLabel)
+
     const ringMaterial = new THREE.MeshStandardMaterial({ color: 0x6680ff, emissive: 0x263c9e, emissiveIntensity: 0.3, metalness: 0.58, roughness: 0.34 })
     const ringGeometry = new THREE.TorusGeometry(1.72, 0.018, 12, 128)
     const ringOne = new THREE.Mesh(ringGeometry, ringMaterial)
@@ -271,6 +291,8 @@ function IdentityCore3D() {
       coreMaterial.dispose()
       shieldEdgesMaterial.dispose()
       privateMaterial.dispose()
+      identityLabelTexture.dispose()
+      identityLabelMaterial.dispose()
       ringMaterial.dispose()
       nodeMaterials.forEach((material) => material.dispose())
       accountCardMaterial.dispose()
