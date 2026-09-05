@@ -64,15 +64,15 @@
 .ot-instrument-header div, .ot-instrument-footer span { display: flex; align-items: center; gap: 0.55rem; }
 .ot-instrument-header div > span, .ot-instrument-footer i { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--ot-lime); box-shadow: 0 0 0.8rem rgba(185,246,107,0.5); }
 .ot-instrument-header > span { padding: 0.35rem 0.5rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.35rem; }
-.ot-instrument-stage { position: relative; min-height: clamp(30rem, 42vw, 38rem); overflow: hidden; background: radial-gradient(circle at 50% 45%, rgba(73,101,230,0.2), transparent 44%), linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px); background-size: auto, 4rem 4rem, 4rem 4rem; }
+.ot-instrument-stage { position: relative; min-height: clamp(30rem, 42vw, 38rem); overflow: hidden; background: var(--ot-paper); }
 .identity-core-shell { position: absolute; inset: 0; }
 .identity-core-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 .identity-core-fallback { display: none; }
 .identity-core-shell.has-webgl-fallback .identity-core-canvas { display: none; }
 .identity-core-shell.has-webgl-fallback .identity-core-fallback { position: absolute; inset: 18%; display: grid; place-items: center; border: 1px solid rgba(113,217,255,0.4); border-radius: 50%; }
 .identity-core-shell.has-webgl-fallback .identity-core-fallback i { width: 28%; aspect-ratio: 1; background: var(--ot-lime); clip-path: polygon(50% 0, 92% 18%, 84% 70%, 50% 100%, 16% 70%, 8% 18%); }
-.ot-scene-label { position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 0.2rem; color: rgba(255,255,255,0.46); font-size: 0.55rem; letter-spacing: 0.1em; pointer-events: none; }
-.ot-scene-label b { color: white; font-size: 0.7rem; }
+.ot-scene-label { position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 0.2rem; color: rgba(11,13,18,0.5); font-size: 0.55rem; letter-spacing: 0.1em; pointer-events: none; }
+.ot-scene-label b { color: var(--ot-ink); font-size: 0.7rem; }
 .ot-scene-label-a { top: 1.2rem; left: 1.2rem; }
 .ot-scene-label-b { right: 1.2rem; bottom: 1.2rem; text-align: right; }
 .ot-instrument-footer { border-top: 1px solid rgba(255,255,255,0.1); }
@@ -80,15 +80,6 @@
 .ot-identity-core-label { position: absolute; inset: 42% auto auto 50%; transform: translate(-50%, -50%); display: grid; gap: .2rem; text-align: center; pointer-events: none; color: #f7f9fc; text-transform: uppercase; letter-spacing: .12em; text-shadow: 0 2px 12px rgba(0,0,0,.65); }
 .ot-identity-core-label strong { font-size: .68rem; line-height: 1.25; }
 .ot-identity-core-label span { color: #b9f66b; font-size: .5rem; letter-spacing: .08em; text-transform: none; }
-.ot-identity-map-controls { position: relative; z-index: 2; padding: .9rem 1rem 0; }
-.ot-identity-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .45rem; }
-.ot-identity-tabs button { min-height: 2.5rem; border: 1px solid rgba(216,224,255,.25); border-radius: 999px; background: rgba(9,12,22,.76); color: #d8e0ff; font: inherit; font-size: .72rem; cursor: pointer; transition: border-color .2s ease, background .2s ease, color .2s ease; }
-.ot-identity-tabs button:hover, .ot-identity-tabs button:focus-visible { border-color: #b9f66b; color: #fff; outline: 2px solid rgba(185,246,107,.55); outline-offset: 2px; }
-.ot-identity-tabs button[aria-selected="true"] { border-color: #b9f66b; background: rgba(185,246,107,.14); color: #b9f66b; }
-.ot-identity-map-description { display: grid; gap: .2rem; min-height: 2.7rem; margin: .65rem 0 0; color: #aeb7d4; font-size: .78rem; line-height: 1.45; }
-.ot-identity-map-description strong { color: #fff; font-size: .82rem; }
-@media (max-width: 640px) { .ot-identity-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ot-identity-tabs button { font-size: .68rem; } .ot-identity-map-controls { padding-inline: .7rem; } }
-@media (prefers-reduced-motion: reduce) { .ot-identity-tabs button { transition: none; } }
 
 .ot-principle-strip { border-block: 1px solid var(--ot-line); background: white; }
 .ot-principle-strip .ot-container { display: grid; grid-template-columns: repeat(3, 1fr); }

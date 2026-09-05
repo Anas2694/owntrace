@@ -28,13 +28,6 @@ const privacyPrinciples = [
   ['Revocable access', 'Make connected sources visible and disconnectable.'],
 ]
 
-const identityAreas = [
-  ['Accounts', 'A reviewable inventory of accounts surfaced by connected sources.'],
-  ['Subscriptions', 'Recurring-service clues that may deserve a closer look.'],
-  ['Breach reports', 'Known exposure records connected to the accounts they may affect.'],
-  ['Privacy actions', 'A user-controlled queue for reviewing access, cleanup, and next steps.'],
-]
-
 function Mark() {
   return <span className="ot-mark" aria-hidden="true"><i /><i /><i /></span>
 }
@@ -45,7 +38,6 @@ function Arrow() {
 
 function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [selectedIdentityArea, setSelectedIdentityArea] = useState(0)
   const menuButtonRef = useRef(null)
 
   useEffect(() => {
@@ -105,12 +97,6 @@ function LandingPage() {
                 <span className="ot-scene-label ot-scene-label-a">FOUR REVIEW AREAS <b>CONNECTED BY EVIDENCE</b></span>
                 <span className="ot-scene-label ot-scene-label-b">BODY CONTENT <b>NOT STORED</b></span>
                 <div className="ot-identity-core-label" aria-hidden="true"><strong>YOUR<br />IDENTITY</strong><span>evidence in context</span></div>
-              </div>
-              <div className="ot-identity-map-controls" aria-label="Identity map areas">
-                <div className="ot-identity-tabs" role="tablist" aria-label="Choose an identity area">
-                  {identityAreas.map(([title], index) => <button key={title} type="button" role="tab" aria-selected={selectedIdentityArea === index} aria-controls={`identity-area-${index}`} onClick={() => setSelectedIdentityArea(index)}>{title}</button>)}
-                </div>
-                <p id={`identity-area-${selectedIdentityArea}`} className="ot-identity-map-description" role="tabpanel"><strong>{identityAreas[selectedIdentityArea][0]}</strong><span>{identityAreas[selectedIdentityArea][1]}</span></p>
               </div>
               <div className="ot-instrument-footer"><span><i /> Evidence received</span><span>Review before action</span></div>
             </div>
