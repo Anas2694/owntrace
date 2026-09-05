@@ -20,7 +20,7 @@ const googleConnectionSchema = new mongoose.Schema(
     lastSyncAt: { type: Date, default: null },
     status: {
       type: String,
-      enum: ['CONNECTED', 'NEEDS_RECONNECT', 'SYNCING', 'ERROR'],
+      enum: ['CONNECTED', 'NEEDS_RECONNECT', 'SYNCING', 'DISCONNECTING', 'ERROR'],
       default: 'CONNECTED',
     },
     lastErrorCode: { type: String, default: null },

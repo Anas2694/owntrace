@@ -1,7 +1,6 @@
 import { useDeferredValue, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../services/api.js'
-import WorkspaceHeader from '../workspace/WorkspaceHeader.jsx'
 import { formatAccountDate, formatEnum } from './account-format.js'
 import './accounts.css'
 
@@ -122,7 +121,6 @@ function AccountsPage() {
   return (
     <main className="accounts-page">
       <div className="accounts-shell">
-        <WorkspaceHeader />
 
         <section className="accounts-intro" aria-labelledby="accounts-title">
           <div>

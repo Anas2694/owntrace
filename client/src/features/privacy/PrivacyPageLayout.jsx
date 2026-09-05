@@ -31,12 +31,13 @@ function ErrorState({ children }) {
 }
 
 function Pagination({ label, onPageChange, pagination }) {
-  if (!pagination || pagination.pages <= 1) return null
+  const pages = pagination?.pages ?? pagination?.totalPages ?? 1
+  if (!pagination || pages <= 1) return null
   return (
     <nav aria-label={label} className="privacy-pagination">
       <button disabled={pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)} type="button">Previous</button>
-      <span>Page {pagination.page} of {pagination.pages}</span>
-      <button disabled={pagination.page >= pagination.pages} onClick={() => onPageChange(pagination.page + 1)} type="button">Next</button>
+      <span>Page {pagination.page} of {pages}</span>
+      <button disabled={pagination.page >= pages} onClick={() => onPageChange(pagination.page + 1)} type="button">Next</button>
     </nav>
   )
 }

@@ -71,7 +71,7 @@ function OnboardingPage() {
 
     try {
       if (stepIndex === 0) {
-        if (!isReviewingCompletedSetup) {
+        if (user.onboardingStatus === 'NOT_STARTED') {
           await api.patch('/onboarding', { status: 'PRIVACY_REVIEWED' })
           await restoreSession({ showLoading: false })
         }
@@ -79,7 +79,7 @@ function OnboardingPage() {
       } else if (stepIndex === 1) {
         showStep(2)
       } else {
-        if (!isReviewingCompletedSetup) {
+        if (!isReviewingCompletedSetup && user.onboardingStatus !== 'GMAIL_PENDING') {
           await api.patch('/onboarding', { status: 'GMAIL_PENDING' })
           await restoreSession({ showLoading: false })
         }

@@ -13,7 +13,7 @@ import {
 } from '../services/google-oauth.service.js'
 import { buildGoogleCapabilities } from '../services/google-capability.service.js'
 import {
-  cancelSync,
+  cancelAndWaitForSync,
   getSyncPolicy,
   getSyncJob,
   processNextBatch,
@@ -86,6 +86,8 @@ async function oauthCallback(request, response) {
       'OAUTH_USER_MISMATCH',
       'GOOGLE_REFRESH_TOKEN_MISSING',
       'GOOGLE_SCOPE_MISSING',
+      'GOOGLE_ACCOUNT_MISMATCH',
+      'GOOGLE_CONNECTION_BUSY',
     ].includes(error.code)
       ? error.code.toLowerCase()
       : 'connection_failed'
@@ -118,11 +120,11 @@ async function startGmailSync(request, response) {
 
 async function continueGmailSync(request, response) {
   const sync = await processNextBatch(request.auth.userId)
-  response.status(200).json({ success: true, sync: sync.toJSON() })
+  response.status(200).json({ success: true, sync: sync ? sync.toJSON() : null })
 }
 
 async function cancelGmailSync(request, response) {
-  const sync = await cancelSync(request.auth.userId)
+  const sync = await cancelAndWaitForSync(request.auth.userId)
   response.status(200).json({ success: true, sync: sync ? sync.toJSON() : null })
 }
 

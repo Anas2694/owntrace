@@ -23,6 +23,7 @@ import PrivacyInboxPage from './features/privacy/PrivacyInboxPage.jsx'
 import PrivacyRequestsPage from './features/privacy/PrivacyRequestsPage.jsx'
 import SubscriptionsPage from './features/privacy/SubscriptionsPage.jsx'
 import AccountSettingsPage from './features/settings/AccountSettingsPage.jsx'
+import PrivacyWorkspace from './features/privacy/PrivacyWorkspace.jsx'
 
 function App() {
   return (
@@ -44,18 +45,18 @@ function App() {
         path="/connect/gmail"
         element={<ProtectedRoute><GmailConnectionPage /></ProtectedRoute>}
       />
-      <Route path="/connect/microsoft" element={<ProtectedRoute><MicrosoftConnectionPage /></ProtectedRoute>} />
-      <Route path="/accounts" element={<ProtectedRoute><AccountsPage /></ProtectedRoute>} />
+      <Route path="/connect/microsoft" element={<ProtectedRoute><PrivacyWorkspace title="Microsoft"><MicrosoftConnectionPage /></PrivacyWorkspace></ProtectedRoute>} />
+      <Route path="/accounts" element={<ProtectedRoute><PrivacyWorkspace title="Accounts"><AccountsPage /></PrivacyWorkspace></ProtectedRoute>} />
       <Route
         path="/accounts/:id"
-        element={<ProtectedRoute><AccountDetailPage /></ProtectedRoute>}
+        element={<ProtectedRoute><PrivacyWorkspace title="Account details"><AccountDetailPage /></PrivacyWorkspace></ProtectedRoute>}
       />
-      <Route path="/identity" element={<ProtectedRoute><IdentityPage /></ProtectedRoute>} />
+      <Route path="/identity" element={<ProtectedRoute><PrivacyWorkspace title="Identity map"><IdentityPage /></PrivacyWorkspace></ProtectedRoute>} />
       <Route
         path="/account-actions"
-        element={<ProtectedRoute><AccountActionsPage /></ProtectedRoute>}
+        element={<ProtectedRoute><PrivacyWorkspace title="Account actions"><AccountActionsPage /></PrivacyWorkspace></ProtectedRoute>}
       />
-      <Route path="/settings" element={<ProtectedRoute><AccountSettingsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><PrivacyWorkspace title="Settings"><AccountSettingsPage /></PrivacyWorkspace></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/subscriptions" element={<ProtectedRoute><SubscriptionsPage /></ProtectedRoute>} />
       <Route path="/breaches" element={<ProtectedRoute><BreachesPage /></ProtectedRoute>} />

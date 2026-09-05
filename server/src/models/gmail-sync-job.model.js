@@ -23,6 +23,8 @@ const gmailSyncJobSchema = new mongoose.Schema(
     storedCount: { type: Number, default: 0, min: 0 },
     estimatedTotal: { type: Number, default: null, min: 0 },
     nextPageToken: { type: String, default: null, select: false },
+    runId: { type: String, default: null, select: false },
+    leaseId: { type: String, default: null, select: false },
     lastErrorCode: { type: String, default: null },
     startedAt: { type: Date, default: Date.now },
     completedAt: { type: Date, default: null },
@@ -37,6 +39,8 @@ const gmailSyncJobSchema = new mongoose.Schema(
         delete returnedObject.userId
         delete returnedObject.connectionId
         delete returnedObject.nextPageToken
+        delete returnedObject.runId
+        delete returnedObject.leaseId
         return returnedObject
       },
     },

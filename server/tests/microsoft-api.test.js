@@ -9,7 +9,7 @@ import MicrosoftSyncJob from '../src/models/microsoft-sync-job.model.js'
 import MicrosoftSubscription from '../src/models/microsoft-subscription.model.js'
 import Subscription from '../src/models/subscription.model.js'
 import User from '../src/models/user.model.js'
-import { encryptSecret } from '../src/utils/encryption.js'
+import { decryptSecret, encryptSecret } from '../src/utils/encryption.js'
 
 const password = 'microsoft API test password'
 
@@ -24,6 +24,22 @@ async function register(email) {
 }
 
 describe('Microsoft integration API', () => {
+  it.each(['original-account', 'different-account'])('does not reuse another Microsoft identity\'s refresh token: %s', async (identity) => {
+    const { agent, userId } = await register('microsoft-reconnect@example.com')
+    await MicrosoftConnection.create({ userId, microsoftAccountId: 'original-account', email: 'microsoft-reconnect@example.com', encryptedAccessToken: encryptSecret('original-access'), encryptedRefreshToken: encryptSecret('original-refresh'), scopes: ['Mail.ReadBasic'], tokenExpiresAt: new Date(Date.now() + 3_600_000) })
+    const start = await agent.get('/api/microsoft/oauth/start').expect(302)
+    const state = new URL(start.headers.location).searchParams.get('state')
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'replacement-access', expires_in: 3600, scope: 'Mail.ReadBasic' })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: identity, mail: 'microsoft-reconnect@example.com' }))))
+    const callback = await agent.get(`/api/microsoft/oauth/callback?code=synthetic-code&state=${encodeURIComponent(state)}`).expect(302)
+    expect(callback.headers.location).toContain(identity === 'original-account' ? 'microsoft=connected' : 'microsoft=microsoft_account_mismatch')
+    const stored = await MicrosoftConnection.findOne({ userId }).select('+encryptedAccessToken +encryptedRefreshToken')
+    expect(stored.microsoftAccountId).toBe('original-account')
+    expect(decryptSecret(stored.encryptedRefreshToken)).toBe('original-refresh')
+    expect(decryptSecret(stored.encryptedAccessToken)).toBe(identity === 'original-account' ? 'replacement-access' : 'original-access')
+  })
+
   it('requires authentication for every Microsoft integration route', async () => {
     await Promise.all([
       request(app).get('/api/microsoft/connection').expect(401),

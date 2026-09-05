@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../services/api.js'
 import { formatAccountDate, formatEnum } from '../accounts/account-format.js'
-import WorkspaceHeader from '../workspace/WorkspaceHeader.jsx'
 import './account-actions.css'
 
 const emptySummary = { completed: 0, dismissed: 0, highPriority: 0, inProgress: 0, open: 0 }
@@ -145,7 +144,6 @@ function AccountActionsPage() {
   return (
     <main className="cleanup-page">
       <div className="cleanup-shell">
-        <WorkspaceHeader />
 
         <section className="cleanup-intro" aria-labelledby="cleanup-title">
           <div>

@@ -21,6 +21,9 @@ const child = spawn(process.execPath, ['src/server.js'], {
     CLIENT_ORIGINS: serveMode ? 'http://localhost:5173' : 'https://app.owntrace.example',
     GOOGLE_CLIENT_ID: 'smoke-client-id.apps.googleusercontent.com',
     GOOGLE_CLIENT_SECRET: sensitiveMarkers[0],
+    MICROSOFT_CLIENT_ID: '',
+    MICROSOFT_CLIENT_SECRET: '',
+    MICROSOFT_REDIRECT_URI: '',
     GOOGLE_REDIRECT_URI: serveMode
       ? 'http://localhost:5000/api/google/oauth/callback'
       : 'https://app.owntrace.example/api/google/oauth/callback',
@@ -110,7 +113,8 @@ try {
   if (!live.headers.get('content-security-policy')) throw new Error('Helmet CSP is missing')
   await expectResponse('/api/health/ready', 200, 'application/json')
   await expectResponse('/api/not-a-route', 401, 'application/json')
-  await expectResponse('/', 200, 'text/html')
+  const home = await expectResponse('/', 200, 'text/html')
+  if (home.headers.has('ratelimit')) throw new Error('Static pages must not consume the API rate limit')
   await expectResponse('/privacy-policy', 200, 'text/html')
   await expectResponse('/terms', 200, 'text/html')
   const p95Ms = await runLoadCheck()

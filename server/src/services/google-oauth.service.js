@@ -16,6 +16,7 @@ import AppError from '../utils/app-error.js'
 import { decryptSecret, encryptSecret } from '../utils/encryption.js'
 import { removeConnectionDiscoveries } from './account-discovery.service.js'
 import { removeSubscriptionsForUser } from './subscription-detection.service.js'
+import { cancelAndWaitForSync } from './gmail-sync.service.js'
 
 const GOOGLE_STATE_AUDIENCE = `${TOKEN_AUDIENCE}:google-oauth`
 const GOOGLE_STATE_ISSUER = `${TOKEN_ISSUER}:google-oauth`
@@ -104,6 +105,16 @@ async function completeAuthorization({ code, cookieState, requestState, userId }
 
   const existingConnection = await GoogleConnection.findOne({ userId })
     .select('+encryptedRefreshToken')
+  if (existingConnection && ['SYNCING', 'DISCONNECTING'].includes(existingConnection.status)) {
+    throw new AppError('Finish or cancel the current Gmail operation before reconnecting.', 409, 'GOOGLE_CONNECTION_BUSY')
+  }
+  if (existingConnection && existingConnection.googleAccountId !== identity.sub) {
+    throw new AppError(
+      'Disconnect the current Google account before connecting a different account.',
+      409,
+      'GOOGLE_ACCOUNT_MISMATCH',
+    )
+  }
   const encryptedRefreshToken = tokens.refresh_token
     ? encryptSecret(tokens.refresh_token)
     : existingConnection?.encryptedRefreshToken
@@ -150,7 +161,11 @@ async function completeAuthorization({ code, cookieState, requestState, userId }
 
   await User.updateOne(
     { _id: userId },
-    { $addToSet: { authProviders: 'google' }, $set: { onboardingStatus: 'SCAN_PENDING' } },
+    { $addToSet: { authProviders: 'google' } },
+  )
+  await User.updateOne(
+    { _id: userId, onboardingStatus: { $ne: 'COMPLETED' } },
+    { $set: { onboardingStatus: 'SCAN_PENDING' } },
   )
 
   return connection
@@ -185,6 +200,8 @@ async function revokeGoogleAccessForUser(userId) {
   const connection = await getConnectionForUser(userId, { includeSecrets: true })
   if (!connection) return false
 
+  await GoogleConnection.updateOne({ _id: connection.id, userId }, { $set: { status: 'DISCONNECTING' } })
+  await cancelAndWaitForSync(userId)
   await revokeConnectionToken(connection)
   return true
 }
@@ -193,7 +210,14 @@ async function disconnectGoogle(userId) {
   const connection = await getConnectionForUser(userId, { includeSecrets: true })
   if (!connection) return false
 
-  await revokeConnectionToken(connection)
+  await GoogleConnection.updateOne({ _id: connection.id, userId }, { $set: { status: 'DISCONNECTING' } })
+  await cancelAndWaitForSync(userId)
+  try {
+    await revokeConnectionToken(connection)
+  } catch (error) {
+    await GoogleConnection.updateOne({ _id: connection.id, userId }, { $set: { status: 'ERROR', lastErrorCode: 'GOOGLE_REVOCATION_FAILED' } })
+    throw error
+  }
 
   await Promise.all([
     removeConnectionDiscoveries(userId, connection.id),
@@ -206,7 +230,7 @@ async function disconnectGoogle(userId) {
   await GoogleConnection.deleteOne({ _id: connection.id, userId })
   await User.updateOne(
     { _id: userId },
-    { $pull: { authProviders: 'google' }, $set: { onboardingStatus: 'GMAIL_PENDING' } },
+    { $pull: { authProviders: 'google' } },
   )
   return true
 }
