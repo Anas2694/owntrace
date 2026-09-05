@@ -90,15 +90,13 @@ function LandingPage() {
               </div>
               <p className="ot-trust-line"><span aria-hidden="true">✓</span> Nothing is connected until you choose it.</p>
             </div>
-            <div className="ot-hero-instrument" role="group" aria-labelledby="identity-map-title">
-              <div className="ot-instrument-header"><div id="identity-map-title"><span /> Your digital identity</div><span>Illustrative map</span></div>
+            <div className="ot-hero-instrument" role="group" aria-label="Your digital identity map">
               <div className="ot-instrument-stage">
                 <Suspense fallback={<div className="identity-core-shell is-loading" aria-hidden="true" />}><IdentityCore3D /></Suspense>
                 <span className="ot-scene-label ot-scene-label-a">FOUR REVIEW AREAS <b>CONNECTED BY EVIDENCE</b></span>
                 <span className="ot-scene-label ot-scene-label-b">BODY CONTENT <b>NOT STORED</b></span>
                 <div className="ot-identity-core-label" aria-hidden="true"><strong>YOUR<br />IDENTITY</strong><span>evidence in context</span></div>
               </div>
-              <div className="ot-instrument-footer"><span><i /> Evidence received</span><span>Review before action</span></div>
             </div>
           </div>
         </section>
