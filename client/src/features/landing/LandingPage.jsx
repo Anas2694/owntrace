@@ -62,7 +62,7 @@ function LandingPage() {
           <a className="ot-brand" href="#top" aria-label="OwnTrace home"><Mark /><span>OwnTrace</span></a>
           <div className="ot-nav-links">
             <a href="#capabilities">Product</a><a href="#how-it-works">How it works</a>
-            <a href="#privacy">Privacy</a><a href="https://github.com/Anas2694/owntrace">GitHub</a>
+            <a href="#privacy">Privacy</a>
           </div>
           <div className="ot-nav-actions">
             <Link to="/login">Sign in</Link>
@@ -71,7 +71,7 @@ function LandingPage() {
           <button aria-controls="ot-mobile-menu" aria-expanded={menuOpen} aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} className="ot-menu-button" onClick={() => setMenuOpen((value) => !value)} ref={menuButtonRef} type="button"><span /><span /></button>
           <div className="ot-mobile-menu" id="ot-mobile-menu" hidden={!menuOpen}>
             <a href="#capabilities" onClick={closeMenu}>Product</a><a href="#how-it-works" onClick={closeMenu}>How it works</a>
-            <a href="#privacy" onClick={closeMenu}>Privacy</a><a href="https://github.com/Anas2694/owntrace" onClick={closeMenu}>GitHub</a>
+            <a href="#privacy" onClick={closeMenu}>Privacy</a>
             <Link to="/login" onClick={closeMenu}>Sign in</Link><Link className="ot-button ot-button-light" to="/register" onClick={closeMenu}>Create account</Link>
           </div>
         </nav>
@@ -143,15 +143,15 @@ function LandingPage() {
         </div></section>
 
         <section className="ot-section ot-final" id="development-status" aria-labelledby="final-title"><div className="ot-container ot-final-panel">
-          <div><p className="ot-kicker">Early development · open project</p><h2 id="final-title">Start building a clearer picture of where your digital identity lives.</h2></div>
-          <div><p>Create your OwnTrace account first. No mail provider is connected during registration.</p><div className="ot-final-actions"><Link className="ot-button ot-button-dark" to="/register">Create your account <Arrow /></Link><a className="ot-text-link" href="https://github.com/Anas2694/owntrace">Follow development <Arrow /></a></div></div>
+          <div><p className="ot-kicker">Early development · user-controlled setup</p><h2 id="final-title">Start building a clearer picture of where your digital identity lives.</h2></div>
+          <div><p>Create your OwnTrace account first. No mail provider is connected during registration.</p><div className="ot-final-actions"><Link className="ot-button ot-button-dark" to="/register">Create your account <Arrow /></Link></div></div>
         </div></section>
       </main>
 
       <footer className="ot-footer"><div className="ot-container ot-footer-main">
         <div><a className="ot-brand ot-brand-dark" href="#top"><Mark /><span>OwnTrace</span></a><p>Own your digital footprint.</p></div>
-        <nav aria-label="Footer navigation"><div><strong>Explore</strong><a href="#capabilities">Product</a><a href="#how-it-works">How it works</a><a href="#privacy">Privacy</a></div><div><strong>Project</strong><a href="https://github.com/Anas2694/owntrace">GitHub</a><a href="#development-status">Development status</a></div><div><strong>Legal</strong><Link to="/privacy-policy">Privacy policy</Link><Link to="/terms">Terms</Link></div></nav>
-      </div><div className="ot-container ot-footer-bottom"><span>© {new Date().getFullYear()} OwnTrace</span><span>Public project · Early development</span></div></footer>
+        <nav aria-label="Footer navigation"><div><strong>Explore</strong><a href="#capabilities">Product</a><a href="#how-it-works">How it works</a><a href="#privacy">Privacy</a></div><div><strong>Status</strong><a href="#development-status">Development status</a></div><div><strong>Legal</strong><Link to="/privacy-policy">Privacy policy</Link><Link to="/terms">Terms</Link></div></nav>
+      </div><div className="ot-container ot-footer-bottom"><span>© {new Date().getFullYear()} OwnTrace</span><span>Early development</span></div></footer>
     </div>
   )
 }
