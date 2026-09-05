@@ -94,7 +94,6 @@ function LandingPage() {
               <div className="ot-instrument-stage">
                 <Suspense fallback={<div className="identity-core-shell is-loading" aria-hidden="true" />}><IdentityCore3D /></Suspense>
                 <span className="ot-scene-label ot-scene-label-a">FOUR REVIEW AREAS <b>CONNECTED BY EVIDENCE</b></span>
-                <span className="ot-scene-label ot-scene-label-b">BODY CONTENT <b>NOT STORED</b></span>
               </div>
             </div>
           </div>
