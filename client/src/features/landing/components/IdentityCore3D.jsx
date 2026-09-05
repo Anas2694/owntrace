@@ -101,10 +101,10 @@ function IdentityCore3D() {
     ]
     const nodePositions = [[1.62, 0.78, 0.5], [-1.62, -0.52, 0.42], [0.58, -1.65, 0.58], [-0.74, 1.62, -0.22]]
     const accountLabels = [
-      ['GMAIL', 'Metadata signal', '#405cf5'],
-      ['OUTLOOK', 'Mail connection', '#38c6ec'],
-      ['BREACH', 'Exposure record', '#f6a825'],
-      ['BILLING', 'Subscription clue', '#79b83e'],
+      ['ACCOUNTS', 'Identity inventory', '#405cf5'],
+      ['SUBSCRIPTIONS', 'Recurring clues', '#79b83e'],
+      ['BREACH REPORTS', 'Exposure record', '#f6a825'],
+      ['PRIVACY ACTIONS', 'Review queue', '#38c6ec'],
     ]
     const accountCardGeometry = new THREE.BoxGeometry(1.16, 0.62, 0.08)
     const accountFaceGeometry = new THREE.PlaneGeometry(1.08, 0.54)
