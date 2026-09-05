@@ -264,7 +264,8 @@ function IdentityCore3D() {
       if (dragging) {
         dragX += (event.clientX - lastPointerX) / bounds.width * 1.8
         dragY += (event.clientY - lastPointerY) / bounds.height * 1.2
-        dragY = Math.max(-0.8, Math.min(0.8, dragY))
+        dragX = Math.max(-0.62, Math.min(0.62, dragX))
+        dragY = Math.max(-0.45, Math.min(0.45, dragY))
         lastPointerX = event.clientX
         lastPointerY = event.clientY
       }
