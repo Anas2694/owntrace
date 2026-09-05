@@ -217,6 +217,11 @@ function IdentityCore3D() {
     let pointerY = 0
     let currentX = 0
     let currentY = 0
+    let dragX = 0
+    let dragY = 0
+    let dragging = false
+    let lastPointerX = 0
+    let lastPointerY = 0
 
     const resize = () => {
       const width = Math.max(1, canvas.clientWidth)
@@ -231,8 +236,8 @@ function IdentityCore3D() {
       const seconds = time * 0.001
       currentX += (pointerX - currentX) * 0.035
       currentY += (pointerY - currentY) * 0.035
-      identityGroup.rotation.y = -0.3 + currentX * 0.34 + (reducedMotion.matches ? 0 : seconds * 0.07)
-      identityGroup.rotation.x = -0.16 + currentY * 0.18
+      identityGroup.rotation.y = -0.3 + dragX + currentX * 0.12 + (reducedMotion.matches ? 0 : seconds * 0.07)
+      identityGroup.rotation.x = -0.16 + dragY + currentY * 0.08
       identityGroup.position.y = reducedMotion.matches ? 0 : Math.sin(seconds * 0.65) * 0.055
       ringOne.rotation.z += reducedMotion.matches ? 0 : 0.0012
       ringTwo.rotation.x += reducedMotion.matches ? 0 : 0.0008
@@ -256,6 +261,27 @@ function IdentityCore3D() {
       const bounds = canvas.getBoundingClientRect()
       pointerX = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2
       pointerY = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2
+      if (dragging) {
+        dragX += (event.clientX - lastPointerX) / bounds.width * 1.8
+        dragY += (event.clientY - lastPointerY) / bounds.height * 1.2
+        dragY = Math.max(-0.8, Math.min(0.8, dragY))
+        lastPointerX = event.clientX
+        lastPointerY = event.clientY
+      }
+    }
+
+    const handlePointerDown = (event) => {
+      dragging = true
+      lastPointerX = event.clientX
+      lastPointerY = event.clientY
+      canvas.setPointerCapture?.(event.pointerId)
+      canvas.classList.add('is-dragging')
+    }
+
+    const handlePointerUp = (event) => {
+      dragging = false
+      canvas.releasePointerCapture?.(event.pointerId)
+      canvas.classList.remove('is-dragging')
     }
 
     const handleVisibility = () => {
@@ -273,6 +299,9 @@ function IdentityCore3D() {
     resizeObserver.observe(canvas)
     intersectionObserver.observe(canvas)
     canvas.addEventListener('pointermove', handlePointer, { passive: true })
+    canvas.addEventListener('pointerdown', handlePointerDown)
+    canvas.addEventListener('pointerup', handlePointerUp)
+    canvas.addEventListener('pointercancel', handlePointerUp)
     document.addEventListener('visibilitychange', handleVisibility)
     reducedMotion.addEventListener('change', restart)
     restart()
@@ -282,6 +311,9 @@ function IdentityCore3D() {
       resizeObserver.disconnect()
       intersectionObserver.disconnect()
       canvas.removeEventListener('pointermove', handlePointer)
+      canvas.removeEventListener('pointerdown', handlePointerDown)
+      canvas.removeEventListener('pointerup', handlePointerUp)
+      canvas.removeEventListener('pointercancel', handlePointerUp)
       document.removeEventListener('visibilitychange', handleVisibility)
       reducedMotion.removeEventListener('change', restart)
       coreGeometry.dispose()

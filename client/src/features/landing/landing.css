@@ -66,7 +66,8 @@
 .ot-instrument-header > span { padding: 0.35rem 0.5rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.35rem; }
 .ot-instrument-stage { position: relative; min-height: clamp(30rem, 42vw, 38rem); overflow: hidden; background: var(--ot-paper); }
 .identity-core-shell { position: absolute; inset: 0; }
-.identity-core-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.identity-core-canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.identity-core-canvas.is-dragging { cursor: grabbing; }
 .identity-core-fallback { display: none; }
 .identity-core-shell.has-webgl-fallback .identity-core-canvas { display: none; }
 .identity-core-shell.has-webgl-fallback .identity-core-fallback { position: absolute; inset: 18%; display: grid; place-items: center; border: 1px solid rgba(113,217,255,0.4); border-radius: 50%; }
