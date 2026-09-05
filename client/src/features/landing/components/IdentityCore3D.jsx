@@ -87,11 +87,15 @@ function IdentityCore3D() {
     identityLabelCanvas.height = 180
     const identityLabelContext = identityLabelCanvas.getContext('2d')
     identityLabelContext.textAlign = 'center'
-    identityLabelContext.fillStyle = '#f7f9fc'
-    identityLabelContext.font = '700 42px Arial'
-    identityLabelContext.fillText('YOUR IDENTITY', 256, 76)
+    identityLabelContext.lineWidth = 8
+    identityLabelContext.strokeStyle = 'rgba(0, 0, 0, 0.82)'
     identityLabelContext.fillStyle = '#b9f66b'
+    identityLabelContext.font = '700 46px Arial'
+    identityLabelContext.strokeText('YOUR IDENTITY', 256, 76)
+    identityLabelContext.fillText('YOUR IDENTITY', 256, 76)
+    identityLabelContext.fillStyle = '#ffffff'
     identityLabelContext.font = '400 22px Arial'
+    identityLabelContext.strokeText('evidence in context', 256, 120)
     identityLabelContext.fillText('evidence in context', 256, 120)
     const identityLabelTexture = new THREE.CanvasTexture(identityLabelCanvas)
     identityLabelTexture.colorSpace = THREE.SRGBColorSpace
