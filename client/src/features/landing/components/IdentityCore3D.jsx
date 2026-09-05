@@ -146,7 +146,7 @@ function IdentityCore3D() {
 
       const texture = new THREE.CanvasTexture(labelCanvas)
       texture.colorSpace = THREE.SRGBColorSpace
-      texture.flipY = false
+      texture.flipY = true
       texture.premultiplyAlpha = false
       texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy())
       accountTextures.push(texture)
