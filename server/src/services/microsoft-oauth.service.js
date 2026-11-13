@@ -10,6 +10,7 @@ import { decryptSecret, encryptSecret } from '../utils/encryption.js'
 import User from '../models/user.model.js'
 import { removeConnectionDiscoveries } from './account-discovery.service.js'
 import { removeMicrosoftSubscriptionsForUser } from './microsoft-subscription.service.js'
+import { withMailPublication } from './mail-sync-policy.js'
 
 const issuer = `${TOKEN_ISSUER}:microsoft-oauth`
 const audience = `${TOKEN_AUDIENCE}:microsoft-oauth`
@@ -149,14 +150,18 @@ async function disconnectMicrosoft(userId) {
   if (connection) await MicrosoftConnection.updateOne({ _id: connection.id, userId }, { $set: { lastErrorCode: null, status: 'DISCONNECTING' } })
   const { cancelAndWaitForSync } = await import('./microsoft-sync.service.js')
   await cancelAndWaitForSync(userId)
-  await Promise.all([
-    ...(connection ? [removeConnectionDiscoveries(userId, connection.id)] : []),
-    MicrosoftSignal.deleteMany({ userId, ...(connection ? { connectionId: connection.id } : {}) }),
-    MicrosoftSyncJob.deleteMany({ userId, ...(connection ? { connectionId: connection.id } : {}) }),
-    removeMicrosoftSubscriptionsForUser(userId),
-    MicrosoftConnection.deleteMany({ userId }),
-    User.updateOne({ _id: userId }, { $pull: { authProviders: 'microsoft' } }),
-  ])
+  await withMailPublication(userId, async () => {
+    await Promise.all([
+      MicrosoftSignal.deleteMany({ userId, ...(connection ? { connectionId: connection.id } : {}) }),
+      MicrosoftSyncJob.deleteMany({ userId, ...(connection ? { connectionId: connection.id } : {}) }),
+    ])
+    await Promise.all([
+      ...(connection ? [removeConnectionDiscoveries(userId, connection.id)] : []),
+      removeMicrosoftSubscriptionsForUser(userId),
+      MicrosoftConnection.deleteMany({ userId }),
+      User.updateOne({ _id: userId }, { $pull: { authProviders: 'microsoft' } }),
+    ])
+  })
   return Boolean(connection)
 }
 

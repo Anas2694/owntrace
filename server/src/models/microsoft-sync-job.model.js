@@ -5,6 +5,22 @@ const microsoftSyncJobSchema = new mongoose.Schema({
   runId: { type: String, required: true, default: () => new mongoose.Types.ObjectId().toString(), select: false },
   cancelRequestedAt: { type: Date, default: null, select: false },
   leaseId: { type: String, default: null, select: false },
-}, { timestamps: true, toJSON: { transform(_doc, value) { value.id = value._id.toString(); delete value._id; delete value.__v; delete value.userId; delete value.connectionId; delete value.nextPageLink } } })
+  background: { type: Boolean, default: false },
+  nextAttemptAt: { type: Date, default: null, select: false },
+  retryCount: { type: Number, default: 0, select: false },
+}, {
+  timestamps: true,
+  toJSON: {
+    transform(_doc, value) {
+      value.id = value._id.toString()
+      for (const key of ['_id', '__v', 'userId', 'connectionId', 'nextPageLink', 'runId', 'leaseId', 'cancelRequestedAt', 'nextAttemptAt', 'retryCount']) {
+        delete value[key]
+      }
+      value.background = value.background && process.env.MAIL_BACKGROUND_SYNC === 'true'
+      return value
+    },
+  },
+})
+microsoftSyncJobSchema.index({ background: 1, status: 1, updatedAt: 1 })
 const MicrosoftSyncJob = mongoose.model('MicrosoftSyncJob', microsoftSyncJobSchema)
 export default MicrosoftSyncJob
