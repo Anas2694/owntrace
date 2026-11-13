@@ -4,6 +4,7 @@ import MicrosoftConnection from '../models/microsoft-connection.model.js'
 import MicrosoftSignal from '../models/microsoft-signal.model.js'
 import MicrosoftSyncJob from '../models/microsoft-sync-job.model.js'
 import AppError from '../utils/app-error.js'
+import { backgroundMailSyncEnabled, BATCH_LOCK_TIMEOUT_MS, retryBatchUpdate, withMailPublication } from './mail-sync-policy.js'
 import { deriveSubjectSignal } from './gmail-sync.service.js'
 import { discoverAccountsForUser } from './account-discovery.service.js'
 import { extractBillingMetadata } from './subscription-detection.service.js'
@@ -11,7 +12,6 @@ import { syncMicrosoftSubscriptions } from './microsoft-subscription.service.js'
 import { withMicrosoftAccessToken } from './microsoft-oauth.service.js'
 
 const BATCH_SIZE = 25
-const BATCH_LOCK_TIMEOUT_MS = 5 * 60 * 1000
 const DEFAULT_MESSAGE_LIMIT = 2000
 const GRAPH_ORIGIN = 'https://graph.microsoft.com'
 const GRAPH_INBOX_PATHS = new Set([
@@ -114,7 +114,7 @@ function deriveSignal(userId, connectionId, message) {
 
 async function getSyncJob(userId, { includePageLink = false } = {}) {
   const query = MicrosoftSyncJob.findOne({ userId })
-  if (includePageLink) query.select('+nextPageLink +runId +leaseId')
+  if (includePageLink) query.select('+nextPageLink +runId +leaseId +retryCount')
   return query
 }
 
@@ -124,6 +124,7 @@ async function startSync(userId) {
   if (connection.status === 'NEEDS_RECONNECT') throw new AppError('Reconnect Microsoft before starting a scan.', 409, 'MICROSOFT_RECONNECT_REQUIRED')
   if (connection.status === 'DISCONNECTING') throw new AppError('Microsoft is disconnecting. Try again shortly.', 409, 'MICROSOFT_DISCONNECT_IN_PROGRESS')
   const now = new Date()
+  const runId = crypto.randomUUID()
   let job
   try {
     job = await MicrosoftSyncJob.findOneAndUpdate(
@@ -131,7 +132,7 @@ async function startSync(userId) {
         { status: { $nin: ['QUEUED', 'SCANNING', 'PROCESSING'] } },
         { status: { $in: ['SCANNING', 'PROCESSING'] }, updatedAt: { $lt: new Date(now.getTime() - BATCH_LOCK_TIMEOUT_MS) } },
       ] },
-      { $set: { cancelRequestedAt: null, completedAt: null, connectionId: connection.id, estimatedTotal: null, lastErrorCode: null, leaseId: null, nextPageLink: null, processedCount: 0, runId: crypto.randomUUID(), startedAt: now, status: 'QUEUED', storedCount: 0 } },
+      { $set: { background: false, cancelRequestedAt: null, completedAt: null, connectionId: connection.id, estimatedTotal: null, lastErrorCode: null, leaseId: null, nextAttemptAt: null, nextPageLink: null, processedCount: 0, retryCount: 0, runId, startedAt: now, status: 'QUEUED', storedCount: 0 } },
       { returnDocument: 'after', runValidators: true, upsert: true },
     )
   } catch (error) {
@@ -139,20 +140,44 @@ async function startSync(userId) {
     throw error
   }
   if (!job) throw new AppError('A Microsoft metadata scan is already in progress.', 409, 'MICROSOFT_SYNC_IN_PROGRESS')
-  await MicrosoftConnection.updateOne({ _id: connection.id, userId }, { $set: { lastErrorCode: null, status: 'SYNCING' } })
+  const updatedConnection = await MicrosoftConnection.updateOne(
+    { _id: connection.id, userId, status: { $nin: ['DISCONNECTING', 'NEEDS_RECONNECT'] } },
+    { $set: { lastErrorCode: null, status: 'SYNCING' } },
+  )
+  if (!updatedConnection.matchedCount) {
+    await MicrosoftSyncJob.updateOne({ _id: job.id, runId, status: 'QUEUED' }, { $set: { status: 'CANCELLED', completedAt: new Date() } })
+    throw new AppError('The Microsoft connection changed. Refresh before scanning.', 409, 'MICROSOFT_NOT_CONNECTED')
+  }
+  if (backgroundMailSyncEnabled()) {
+    return await MicrosoftSyncJob.findOneAndUpdate(
+      { _id: job.id, runId, status: 'QUEUED' },
+      { $set: { background: true } },
+      { returnDocument: 'after' },
+    ) || await getSyncJob(userId)
+  }
   return job
 }
 
-async function processNextBatch(userId) {
+async function processNextBatch(userId, { expectedRunId, background = false } = {}) {
   const currentJob = await getSyncJob(userId, { includePageLink: true })
   if (!currentJob) throw new AppError('Start a Microsoft scan before processing it.', 409, 'MICROSOFT_SYNC_NOT_STARTED')
   if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(currentJob.status)) return currentJob
+  if (background ? currentJob.runId !== expectedRunId || !currentJob.background
+    : currentJob.background && backgroundMailSyncEnabled()) return currentJob
 
   const leaseId = crypto.randomUUID()
   const job = await MicrosoftSyncJob.findOneAndUpdate(
-    { _id: currentJob.id, userId, $or: [{ status: 'QUEUED' }, { status: { $in: ['SCANNING', 'PROCESSING'] }, updatedAt: { $lt: new Date(Date.now() - BATCH_LOCK_TIMEOUT_MS) } }] },
+    {
+      _id: currentJob.id,
+      userId,
+      runId: currentJob.runId,
+      $or: [
+        { status: 'QUEUED', ...(background ? { $or: [{ nextAttemptAt: null }, { nextAttemptAt: { $lte: new Date() } }] } : {}) },
+        { status: { $in: ['SCANNING', 'PROCESSING'] }, updatedAt: { $lt: new Date(Date.now() - BATCH_LOCK_TIMEOUT_MS) } },
+      ],
+    },
     { $set: { lastErrorCode: null, leaseId, status: 'SCANNING' } }, { returnDocument: 'after' },
-  ).select('+nextPageLink +runId +leaseId')
+  ).select('+nextPageLink +runId +leaseId +retryCount')
   if (!job) throw new AppError('A Microsoft metadata batch is already in progress.', 409, 'MICROSOFT_SYNC_IN_PROGRESS')
 
   let releaseBarrier
@@ -160,7 +185,10 @@ async function processNextBatch(userId) {
   const barrier = new Promise((resolve) => { releaseBarrier = resolve })
   activeBatchBarriers.set(barrierKey, barrier)
   try {
-    const updatedJob = await withMicrosoftAccessToken(userId, async ({ accessToken, connection }) => {
+    return await withMicrosoftAccessToken(userId, async ({ accessToken, connection }) => {
+      if (connection.id !== job.connectionId.toString()) {
+        throw new AppError('The Microsoft connection changed.', 409, 'MICROSOFT_NOT_CONNECTED')
+      }
       const page = await graphRequest(accessToken, getGraphPageUrl(job.nextPageLink))
       if (!Array.isArray(page.value) || page.value.length > BATCH_SIZE || (page['@odata.nextLink'] !== undefined && typeof page['@odata.nextLink'] !== 'string')) {
         throw new AppError('Microsoft returned an invalid mailbox response.', 502, 'MICROSOFT_REQUEST_FAILED')
@@ -176,7 +204,7 @@ async function processNextBatch(userId) {
       let storedCount = 0
       if (signals.length) {
         const activeLease = await MicrosoftSyncJob.exists({ _id: job.id, userId, runId: job.runId, leaseId, status: 'PROCESSING' })
-        const activeConnection = await MicrosoftConnection.exists({ _id: connection.id, userId, status: 'SYNCING' })
+        const activeConnection = await MicrosoftConnection.exists({ _id: connection.id, userId, status: { $in: ['SYNCING', 'CONNECTED'] } })
         if (!activeLease || !activeConnection) return getSyncJob(userId)
         const result = await MicrosoftSignal.bulkWrite(signals.map((signal) => ({ updateOne: {
           filter: { connectionId: signal.connectionId, messageIdHash: signal.messageIdHash, userId },
@@ -190,11 +218,19 @@ async function processNextBatch(userId) {
       const nextPageLink = reachedLimit ? null : page['@odata.nextLink'] || null
       const completed = !nextPageLink
       const lastErrorCode = reachedLimit && page['@odata.nextLink'] ? 'MESSAGE_LIMIT_REACHED' : null
-      const updated = await MicrosoftSyncJob.findOneAndUpdate(
-        { _id: job.id, userId, runId: job.runId, leaseId, status: 'PROCESSING' },
-        { $inc: { processedCount: messages.length, storedCount }, $set: { completedAt: completed ? new Date() : null, lastErrorCode, nextPageLink, status: completed ? 'COMPLETED' : 'QUEUED' } },
+      const claim = { _id: job.id, userId, runId: job.runId, leaseId, status: 'PROCESSING' }
+      const saveProgress = () => MicrosoftSyncJob.findOneAndUpdate(
+        claim,
+        { $inc: { processedCount: messages.length, storedCount }, $set: { completedAt: completed ? new Date() : null, lastErrorCode, nextAttemptAt: null, nextPageLink, retryCount: 0, status: completed ? 'COMPLETED' : 'QUEUED' } },
         { returnDocument: 'after', runValidators: true },
       )
+      const updated = completed ? await withMailPublication(userId, async () => {
+        if (!await MicrosoftSyncJob.exists(claim)) return null
+        await discoverAccountsForUser(userId)
+        await syncMicrosoftSubscriptions(userId)
+        await MicrosoftConnection.updateOne({ _id: connection.id, userId, status: 'SYNCING' }, { $set: { lastErrorCode, lastSyncAt: new Date(), status: 'CONNECTED' } })
+        return saveProgress()
+      }) : await saveProgress()
       if (!updated) {
         const currentState = await MicrosoftSyncJob.findById(job.id).select('+runId')
         if (currentState?.status === 'CANCELLED' && currentState.runId === job.runId) {
@@ -202,15 +238,17 @@ async function processNextBatch(userId) {
         }
         return getSyncJob(userId)
       }
-      if (completed) await MicrosoftConnection.updateOne({ _id: connection.id, userId, status: 'SYNCING' }, { $set: { lastErrorCode, lastSyncAt: new Date(), status: 'CONNECTED' } })
       return updated
     })
-    if (updatedJob?.status === 'COMPLETED') {
-      await discoverAccountsForUser(userId)
-      await syncMicrosoftSubscriptions(userId)
-    }
-    return updatedJob
   } catch (error) {
+    const retry = retryBatchUpdate(job, error, background)
+    if (retry) {
+      await MicrosoftSyncJob.updateOne(
+        { _id: job.id, userId, runId: job.runId, leaseId, status: { $in: ['SCANNING', 'PROCESSING'] } },
+        { $set: { ...retry, lastErrorCode: error.code } },
+      )
+      return getSyncJob(userId)
+    }
     const ownsLease = await MicrosoftSyncJob.exists({ _id: job.id, userId, runId: job.runId, leaseId, status: { $in: ['SCANNING', 'PROCESSING'] } })
     if (ownsLease) {
       if (error.code === 'MICROSOFT_RECONNECT_REQUIRED') await MicrosoftConnection.updateOne({ _id: job.connectionId, userId, status: 'SYNCING' }, { $set: { lastErrorCode: error.code, status: 'NEEDS_RECONNECT' } })
@@ -239,7 +277,7 @@ async function cancelSync(userId) {
 }
 
 async function cancelAndWaitForSync(userId) {
-  const job = await cancelSync(userId)
+  const job = await withMailPublication(userId, () => cancelSync(userId))
   const barriers = [...activeBatchBarriers.entries()]
     .filter(([key]) => key.startsWith(`${userId}:`))
     .map(([, barrier]) => barrier)

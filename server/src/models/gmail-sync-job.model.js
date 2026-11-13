@@ -25,6 +25,9 @@ const gmailSyncJobSchema = new mongoose.Schema(
     nextPageToken: { type: String, default: null, select: false },
     runId: { type: String, default: null, select: false },
     leaseId: { type: String, default: null, select: false },
+    background: { type: Boolean, default: false },
+    nextAttemptAt: { type: Date, default: null, select: false },
+    retryCount: { type: Number, default: 0, select: false },
     lastErrorCode: { type: String, default: null },
     startedAt: { type: Date, default: Date.now },
     completedAt: { type: Date, default: null },
@@ -41,12 +44,16 @@ const gmailSyncJobSchema = new mongoose.Schema(
         delete returnedObject.nextPageToken
         delete returnedObject.runId
         delete returnedObject.leaseId
+        delete returnedObject.nextAttemptAt
+        delete returnedObject.retryCount
+        returnedObject.background = returnedObject.background && process.env.MAIL_BACKGROUND_SYNC === 'true'
         return returnedObject
       },
     },
   },
 )
 
+gmailSyncJobSchema.index({ background: 1, status: 1, updatedAt: 1 })
 const GmailSyncJob = mongoose.model('GmailSyncJob', gmailSyncJobSchema)
 
 export default GmailSyncJob

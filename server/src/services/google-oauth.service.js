@@ -17,6 +17,7 @@ import { decryptSecret, encryptSecret } from '../utils/encryption.js'
 import { removeConnectionDiscoveries } from './account-discovery.service.js'
 import { removeSubscriptionsForUser } from './subscription-detection.service.js'
 import { cancelAndWaitForSync } from './gmail-sync.service.js'
+import { withMailPublication } from './mail-sync-policy.js'
 
 const GOOGLE_STATE_AUDIENCE = `${TOKEN_AUDIENCE}:google-oauth`
 const GOOGLE_STATE_ISSUER = `${TOKEN_ISSUER}:google-oauth`
@@ -219,14 +220,16 @@ async function disconnectGoogle(userId) {
     throw error
   }
 
-  await Promise.all([
-    removeConnectionDiscoveries(userId, connection.id),
-    removeSubscriptionsForUser(userId),
-  ])
-  await Promise.all([
-    GmailSignal.deleteMany({ connectionId: connection.id, userId }),
-    GmailSyncJob.deleteMany({ connectionId: connection.id, userId }),
-  ])
+  await withMailPublication(userId, async () => {
+    await Promise.all([
+      GmailSignal.deleteMany({ connectionId: connection.id, userId }),
+      GmailSyncJob.deleteMany({ connectionId: connection.id, userId }),
+    ])
+    await Promise.all([
+      removeConnectionDiscoveries(userId, connection.id),
+      removeSubscriptionsForUser(userId),
+    ])
+  })
   await GoogleConnection.deleteOne({ _id: connection.id, userId })
   await User.updateOne(
     { _id: userId },

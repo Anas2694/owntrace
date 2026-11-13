@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../services/api.js'
 import useAuth from '../auth/useAuth.js'
+import useBackgroundScanStatus from '../mail/useBackgroundScanStatus.js'
 import '../google/google-connection.css'
 
 const callbackMessages = {
@@ -29,6 +30,7 @@ function getSyncTitle(sync, isSyncing) {
     : 'Scan completed'
   if (sync.status === 'CANCELLED') return 'Scan cancelled'
   if (sync.status === 'FAILED') return 'Scan needs attention'
+  if (sync.background) return 'Scanning in the background'
   return 'Scan paused and ready to continue'
 }
 
@@ -51,6 +53,7 @@ function MicrosoftConnectionPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
   const [error, setError] = useState('')
   const activeSync = ['QUEUED', 'SCANNING', 'PROCESSING'].includes(sync?.status)
 
@@ -61,28 +64,33 @@ function MicrosoftConnectionPage() {
     setSearchParams(nextSearchParams, { replace: true })
   }, [searchParams, setSearchParams])
 
-  const loadConnection = useCallback(async ({ clearError = true } = {}) => {
-    setIsLoading(true)
+  const loadConnection = useCallback(async ({ clearError = true, quiet = false, isCurrent = () => true } = {}) => {
+    if (!quiet) setIsLoading(true)
     if (clearError) setError('')
     try {
       const [connectionResult, syncResult] = await Promise.allSettled([api.get('/microsoft/connection'), api.get('/microsoft/sync')])
+      if (!isCurrent()) return
+      if (quiet) setError('')
       if (connectionResult.status === 'fulfilled') setMicrosoftState(connectionResult.value.data.microsoft)
       if (syncResult.status === 'fulfilled') setSync(syncResult.value.data.sync)
       if (syncResult.status === 'fulfilled' && syncResult.value.data.sync?.status === 'COMPLETED') await restoreSession({ showLoading: false })
       const failedResult = connectionResult.status === 'rejected' ? connectionResult : syncResult.status === 'rejected' ? syncResult : null
       if (failedResult) setError(failedResult.reason.response?.data?.message || 'OwnTrace could not load all Microsoft connection details. Try again.')
     } catch (requestError) {
+      if (!isCurrent()) return
       setError(requestError.response?.data?.message || 'OwnTrace could not load the Microsoft connection. Try again.')
-    } finally { setIsLoading(false) }
+    } finally { if (!quiet) setIsLoading(false) }
   }, [restoreSession])
 
   useEffect(() => { stopSyncRef.current = false; titleRef.current?.focus(); loadConnection(); return () => { stopSyncRef.current = true } }, [loadConnection])
 
   useEffect(() => {
-    if (!['SCANNING', 'PROCESSING'].includes(sync?.status) || isSyncing || isDisconnecting) return undefined
+    if (sync?.background || !['SCANNING', 'PROCESSING'].includes(sync?.status) || isSyncing || isDisconnecting || isCancelling) return undefined
     const timer = window.setInterval(() => { loadConnection({ clearError: false }) }, 5000)
     return () => window.clearInterval(timer)
-  }, [sync?.status, isSyncing, isDisconnecting, loadConnection])
+  }, [sync?.background, sync?.status, isSyncing, isDisconnecting, isCancelling, loadConnection])
+
+  useBackgroundScanStatus(sync, isDisconnecting || isSyncing || isCancelling, loadConnection)
 
   async function handleDisconnect() {
     stopSyncRef.current = true
@@ -116,14 +124,22 @@ function MicrosoftConnectionPage() {
     stopSyncRef.current = false
     setIsSyncing(true)
     setError('')
-    try { const response = await api.post('/microsoft/sync'); if (stopSyncRef.current) return; setSync(response.data.sync); await runSyncBatches(response.data.sync) }
+    try {
+      const response = await api.post('/microsoft/sync')
+      if (stopSyncRef.current) return
+      setSync(response.data.sync)
+      if (response.data.sync?.background) setIsSyncing(false)
+      else await runSyncBatches(response.data.sync)
+    }
     catch (requestError) { setError(requestError.response?.data?.message || 'OwnTrace could not start the metadata scan. Try again.'); setIsSyncing(false) }
   }
 
   async function handleCancelSync() {
     stopSyncRef.current = true
+    setIsCancelling(true)
     try { const response = await api.delete('/microsoft/sync'); setSync(response.data.sync); await loadConnection() }
     catch (requestError) { setError(requestError.response?.data?.message || 'OwnTrace could not cancel the scan. Try again.') }
+    finally { setIsCancelling(false) }
   }
 
   const connection = microsoftState.connection
@@ -140,7 +156,7 @@ function MicrosoftConnectionPage() {
       <div className="google-actions">{isConnected ? <><a className="google-provider-action" href="/api/microsoft/oauth/start"><MicrosoftMark />Reconnect Microsoft</a><button type="button" onClick={handleDisconnect} disabled={isDisconnecting}>{isDisconnecting ? 'Disconnecting…' : 'Disconnect Microsoft'}</button></> : microsoftState.available ? <a className="google-provider-action" href="/api/microsoft/oauth/start"><MicrosoftMark />Continue with Microsoft</a> : <button type="button" disabled>Microsoft connection unavailable</button>}</div>
       {!isConnected && !isLoading && !microsoftState.available ? <p className="google-configuration-note">Microsoft OAuth has not been configured for this environment. No access can be requested yet.</p> : null}
     </section>
-    {isConnected ? <section className="google-sync-card" aria-labelledby="sync-title" aria-busy={isSyncing}><div><p className="google-card-kicker">Metadata scan</p><h2 id="sync-title" aria-live="polite">{getSyncTitle(sync, isSyncing)}</h2><p>OwnTrace checks up to {microsoftState.syncPolicy?.messageLimit?.toLocaleString() || 'the configured limit'} Inbox metadata records per scan, {microsoftState.syncPolicy?.batchSize || 25} at a time, and can finish sooner when no more results remain. It safely deduplicates messages already seen. A saved clue represents one message, not one discovered account.</p></div><dl><div><dt>Email metadata checked</dt><dd>{sync?.processedCount ?? 0}</dd></div><div><dt>New clues saved</dt><dd>{sync?.storedCount ?? 0}</dd></div></dl>{sync?.lastErrorCode ? <p className="google-configuration-note">{syncNotes[sync.lastErrorCode] || 'The scan finished with a provider note. Your saved progress is safe.'}</p> : null}<div className="google-actions google-sync-actions">{sync?.status === 'COMPLETED' ? <Link className="google-primary-action" to="/accounts">Review discovered accounts</Link> : null}{sync?.status === 'QUEUED' && !isSyncing ? <button className="google-primary-action" type="button" disabled={isDisconnecting || connection.status === 'NEEDS_RECONNECT'} onClick={() => runSyncBatches(sync)}>Resume scan</button> : <button className="google-primary-action" type="button" onClick={handleStartSync} disabled={isSyncing || isDisconnecting || ['SCANNING', 'PROCESSING'].includes(sync?.status) || connection.status === 'NEEDS_RECONNECT'}>{isSyncing ? 'Scanning metadata…' : sync?.status === 'COMPLETED' ? 'Check for newer messages' : 'Start metadata scan'}</button>}{activeSync ? <button type="button" onClick={handleCancelSync}>Cancel scan</button> : null}</div></section> : null}
+    {isConnected ? <section className="google-sync-card" aria-labelledby="sync-title" aria-busy={isSyncing}><div><p className="google-card-kicker">Metadata scan</p><h2 id="sync-title" aria-live="polite">{getSyncTitle(sync, isSyncing)}</h2><p>OwnTrace checks up to {microsoftState.syncPolicy?.messageLimit?.toLocaleString() || 'the configured limit'} Inbox metadata records per scan, {microsoftState.syncPolicy?.batchSize || 25} at a time, and can finish sooner when no more results remain. It safely deduplicates messages already seen. A saved clue represents one message, not one discovered account.{sync?.background && activeSync ? ' You can leave this page while OwnTrace scans.' : ''}</p></div><dl><div><dt>Email metadata checked</dt><dd>{sync?.processedCount ?? 0}</dd></div><div><dt>New clues saved</dt><dd>{sync?.storedCount ?? 0}</dd></div></dl>{sync?.lastErrorCode ? <p className="google-configuration-note">{syncNotes[sync.lastErrorCode] || 'The scan finished with a provider note. Your saved progress is safe.'}</p> : null}<div className="google-actions google-sync-actions">{sync?.status === 'COMPLETED' ? <Link className="google-primary-action" to="/accounts">Review discovered accounts</Link> : null}{sync?.background && activeSync ? null : sync?.status === 'QUEUED' && !isSyncing ? <button className="google-primary-action" type="button" disabled={isDisconnecting || connection.status === 'NEEDS_RECONNECT'} onClick={() => runSyncBatches(sync)}>Resume scan</button> : <button className="google-primary-action" type="button" onClick={handleStartSync} disabled={isSyncing || isDisconnecting || ['SCANNING', 'PROCESSING'].includes(sync?.status) || connection.status === 'NEEDS_RECONNECT'}>{isSyncing ? 'Scanning metadata…' : sync?.status === 'COMPLETED' ? 'Check for newer messages' : 'Start metadata scan'}</button>}{activeSync ? <button type="button" disabled={isDisconnecting || isCancelling} onClick={handleCancelSync}>Cancel scan</button> : null}</div></section> : null}
     <section className="google-boundaries" aria-labelledby="boundaries-title"><div><p className="google-eyebrow">Before you connect</p><h2 id="boundaries-title">What this permission means</h2></div><ul><li><strong>Read selected metadata</strong><span>Sender, normalized subject signal, and received date needed for account and subscription evidence.</span></li><li><strong>No message bodies or attachments</strong><span>Mail.ReadBasic does not grant full message body access.</span></li><li><strong>Disconnect when you choose</strong><span>OwnTrace removes locally derived Microsoft data when you disconnect.</span></li></ul></section>
   </div></main>
 }

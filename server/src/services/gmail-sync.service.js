@@ -11,11 +11,12 @@ import {
   syncSubscriptionsForUser,
 } from './subscription-detection.service.js'
 import { withGoogleClient } from './google-client.service.js'
+import { backgroundMailSyncEnabled, BATCH_LOCK_TIMEOUT_MS, retryBatchUpdate, withMailPublication } from './mail-sync-policy.js'
 
 const BATCH_SIZE = 25
-const BATCH_LOCK_TIMEOUT_MS = 5 * 60 * 1000
 const METADATA_CONCURRENCY = 5
 const DEFAULT_MESSAGE_LIMIT = 2000
+const GMAIL_REQUEST_OPTIONS = { timeout: 15_000 }
 const METADATA_HEADERS = ['From', 'Subject', 'Date']
 const activeBatchBarriers = new Map()
 
@@ -102,6 +103,7 @@ async function startSync(userId) {
   if (connection.status === 'DISCONNECTING') {
     throw new AppError('Gmail is disconnecting. Try again shortly.', 409, 'GOOGLE_DISCONNECT_IN_PROGRESS')
   }
+  const runId = crypto.randomUUID()
   let job
   try {
     job = await GmailSyncJob.findOneAndUpdate(
@@ -120,8 +122,11 @@ async function startSync(userId) {
           lastErrorCode: null,
           nextPageToken: null,
           processedCount: 0,
-          runId: crypto.randomUUID(),
+          runId,
           leaseId: null,
+          background: false,
+          nextAttemptAt: null,
+          retryCount: 0,
           startedAt: new Date(),
           status: 'QUEUED',
           storedCount: 0,
@@ -138,15 +143,22 @@ async function startSync(userId) {
     { $set: { lastErrorCode: null, status: 'SYNCING' } },
   )
   if (!updatedConnection.matchedCount) {
-    await cancelSync(userId)
+    await GmailSyncJob.updateOne({ _id: job.id, runId, status: 'QUEUED' }, { $set: { status: 'CANCELLED', completedAt: new Date() } })
     throw new AppError('The Gmail connection changed. Refresh before scanning.', 409, 'GOOGLE_NOT_CONNECTED')
+  }
+  if (backgroundMailSyncEnabled()) {
+    return await GmailSyncJob.findOneAndUpdate(
+      { _id: job.id, runId, status: 'QUEUED' },
+      { $set: { background: true } },
+      { returnDocument: 'after' },
+    ) || await getSyncJob(userId)
   }
   return job
 }
 
 async function getSyncJob(userId, { includePageToken = false } = {}) {
   const query = GmailSyncJob.findOne({ userId })
-  if (includePageToken) query.select('+nextPageToken +runId +leaseId')
+  if (includePageToken) query.select('+nextPageToken +runId +leaseId +retryCount')
   return query
 }
 
@@ -157,7 +169,7 @@ async function fetchMessageMetadata(gmail, messageId) {
       id: messageId,
       metadataHeaders: METADATA_HEADERS,
       userId: 'me',
-    })
+    }, GMAIL_REQUEST_OPTIONS)
     return { message: response.data }
   } catch (error) {
     if (error?.response?.status === 404) return { deleted: true }
@@ -191,21 +203,24 @@ async function fetchMetadataBatch(gmail, messages) {
   return results
 }
 
-async function processNextBatch(userId) {
+async function processNextBatch(userId, { expectedRunId, background = false } = {}) {
   const currentJob = await getSyncJob(userId, { includePageToken: true })
 
   if (!currentJob) {
     throw new AppError('Start a Gmail scan before processing it.', 409, 'GMAIL_SYNC_NOT_STARTED')
   }
   if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(currentJob.status)) return currentJob
+  if (background ? currentJob.runId !== expectedRunId || !currentJob.background
+    : currentJob.background && backgroundMailSyncEnabled()) return currentJob
 
   const leaseId = crypto.randomUUID()
   const job = await GmailSyncJob.findOneAndUpdate(
     {
       _id: currentJob.id,
       userId,
+      runId: currentJob.runId,
       $or: [
-        { status: 'QUEUED' },
+        { status: 'QUEUED', ...(background ? { $or: [{ nextAttemptAt: null }, { nextAttemptAt: { $lte: new Date() } }] } : {}) },
         {
           status: { $in: ['SCANNING', 'PROCESSING'] },
           updatedAt: { $lt: new Date(Date.now() - BATCH_LOCK_TIMEOUT_MS) },
@@ -214,7 +229,7 @@ async function processNextBatch(userId) {
     },
     { $set: { lastErrorCode: null, leaseId, status: 'SCANNING' } },
     { returnDocument: 'after' },
-  ).select('+nextPageToken +runId +leaseId')
+  ).select('+nextPageToken +runId +leaseId +retryCount')
 
   if (!job) {
     throw new AppError(
@@ -229,13 +244,16 @@ async function processNextBatch(userId) {
   activeBatchBarriers.set(barrierKey, new Promise((resolve) => { releaseBarrier = resolve }))
   const ownedLease = { _id: job.id, userId, runId: job.runId, leaseId }
   try {
-    const updatedJob = await withGoogleClient(userId, async ({ connection, oauthClient }) => {
+    return await withGoogleClient(userId, async ({ connection, oauthClient }) => {
+      if (connection.id !== job.connectionId.toString()) {
+        throw new AppError('The Gmail connection changed.', 409, 'GOOGLE_NOT_CONNECTED')
+      }
       const gmail = google.gmail({ auth: oauthClient, version: 'v1' })
       const listResponse = await gmail.users.messages.list({
         maxResults: Math.min(BATCH_SIZE, Math.max(1, getMessageLimit() - job.processedCount)),
         pageToken: job.nextPageToken || undefined,
         userId: 'me',
-      })
+      }, GMAIL_REQUEST_OPTIONS)
       const messages = (listResponse.data.messages || []).slice(0, Math.min(BATCH_SIZE, Math.max(0, getMessageLimit() - job.processedCount)))
 
       const processingUpdate = await GmailSyncJob.updateOne(
@@ -250,7 +268,7 @@ async function processNextBatch(userId) {
         const status = result.reason?.response?.status || result.reason?.code
         const providerCode = result.reason?.response?.data?.error
         return result.status === 'rejected' && (
-          status === 401 || status === 429 || providerCode === 'invalid_grant'
+          status === 401 || status === 429 || (background && status >= 500) || providerCode === 'invalid_grant'
         )
       })
 
@@ -274,7 +292,7 @@ async function processNextBatch(userId) {
       let storedCount = 0
       if (signals.length) {
         const activeLease = await GmailSyncJob.exists({ ...ownedLease, status: 'PROCESSING' })
-        const activeConnection = await GoogleConnection.exists({ _id: connection.id, userId, status: 'SYNCING' })
+        const activeConnection = await GoogleConnection.exists({ _id: connection.id, userId, status: { $in: ['SYNCING', 'CONNECTED'] } })
         if (!activeLease || !activeConnection) return getSyncJob(userId)
         const bulkResult = await GmailSignal.bulkWrite(
           signals.map((signal) => ({
@@ -319,7 +337,7 @@ async function processNextBatch(userId) {
           ? 'MESSAGE_LIMIT_REACHED'
           : null
 
-      const updatedJob = await GmailSyncJob.findOneAndUpdate(
+      const saveProgress = () => GmailSyncJob.findOneAndUpdate(
         { ...ownedLease, status: 'PROCESSING' },
         {
           $inc: { processedCount: messages.length, storedCount },
@@ -327,30 +345,35 @@ async function processNextBatch(userId) {
             completedAt: completed ? new Date() : null,
             lastErrorCode,
             nextPageToken,
+            nextAttemptAt: null,
+            retryCount: 0,
             status: completed ? 'COMPLETED' : 'QUEUED',
           },
         },
         { returnDocument: 'after', runValidators: true },
       )
 
-      if (!updatedJob) return getSyncJob(userId)
-
-      if (completed) {
+      if (!completed) return await saveProgress() || getSyncJob(userId)
+      return withMailPublication(userId, async () => {
+        if (!await GmailSyncJob.exists({ ...ownedLease, status: 'PROCESSING' })) return getSyncJob(userId)
+        await discoverAccountsForUser(userId)
+        await syncSubscriptionsForUser(userId)
         await GoogleConnection.updateOne(
           { _id: connection.id, userId, status: 'SYNCING' },
           { $set: { lastErrorCode, lastSyncAt: new Date(), status: 'CONNECTED' } },
         )
-      }
-
-      return updatedJob
+        return await saveProgress() || getSyncJob(userId)
+      })
     })
-
-    if (updatedJob?.status === 'COMPLETED') {
-      await discoverAccountsForUser(userId)
-      await syncSubscriptionsForUser(userId)
-    }
-    return updatedJob
   } catch (error) {
+    const retry = retryBatchUpdate(job, error, background)
+    if (retry) {
+      await GmailSyncJob.updateOne(
+        { ...ownedLease, status: { $in: ['SCANNING', 'PROCESSING'] } },
+        { $set: { ...retry, lastErrorCode: error.code } },
+      )
+      return getSyncJob(userId)
+    }
     const failed = await GmailSyncJob.updateOne(
       { ...ownedLease, status: { $in: ['SCANNING', 'PROCESSING', 'COMPLETED'] } },
       { $set: { lastErrorCode: error.code || 'GMAIL_SYNC_FAILED', status: 'FAILED' } },
@@ -386,7 +409,7 @@ async function cancelSync(userId) {
 }
 
 async function cancelAndWaitForSync(userId) {
-  const job = await cancelSync(userId)
+  const job = await withMailPublication(userId, () => cancelSync(userId))
   await Promise.all([...activeBatchBarriers.entries()]
     .filter(([key]) => key.startsWith(`${userId}:`))
     .map(([, barrier]) => barrier))

@@ -9,12 +9,14 @@ import MicrosoftSyncJob from '../src/models/microsoft-sync-job.model.js'
 import MicrosoftSubscription from '../src/models/microsoft-subscription.model.js'
 import Subscription from '../src/models/subscription.model.js'
 import User from '../src/models/user.model.js'
+import { startBackgroundMailSync } from '../src/services/background-mail-sync.service.js'
 import { decryptSecret, encryptSecret } from '../src/utils/encryption.js'
 
 const password = 'microsoft API test password'
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
 })
 
 async function register(email) {
@@ -148,5 +150,42 @@ describe('Microsoft integration API', () => {
     expect(cancelled.body.sync.status).toBe('CANCELLED')
     expect(await MicrosoftSignal.countDocuments({ userId: first.userId, messageIdHash: 'current-run' })).toBe(0)
     expect(await MicrosoftSignal.countDocuments({ userId: first.userId, messageIdHash: 'previous-run' })).toBe(1)
+  })
+
+  it('publishes a background Microsoft scan and hides its claim fields', async () => {
+    vi.stubEnv('MAIL_BACKGROUND_SYNC', 'true')
+    const { agent, userId } = await register('background-microsoft@example.com')
+    await MicrosoftConnection.create({
+      userId, microsoftAccountId: 'background-microsoft', email: 'background-microsoft@example.com',
+      encryptedAccessToken: encryptSecret('synthetic-access'), encryptedRefreshToken: encryptSecret('synthetic-refresh'),
+      scopes: ['Mail.ReadBasic'], tokenExpiresAt: new Date(Date.now() + 3_600_000),
+    })
+    const fetchMail = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      value: [{
+        id: 'background-message',
+        conversationId: 'background-thread',
+        from: { emailAddress: { address: 'billing@example.com' } },
+        receivedDateTime: '2026-08-01T00:00:00Z',
+        subject: 'Monthly payment receipt USD 12.99',
+      }],
+    })))
+    vi.stubGlobal('fetch', fetchMail)
+    const { body } = await agent.post('/api/microsoft/sync').expect(202)
+    expect(body.sync.background).toBe(true)
+    const stop = startBackgroundMailSync({ intervalMs: 25 })
+    try {
+      await vi.waitFor(async () => {
+        expect((await MicrosoftSyncJob.findOne({ userId })).status).toBe('COMPLETED')
+      })
+      const { body: status } = await agent.get('/api/microsoft/sync').expect(200)
+      expect(status.sync).toMatchObject({ status: 'COMPLETED', storedCount: 1 })
+      for (const key of ['runId', 'leaseId', 'nextAttemptAt', 'retryCount']) {
+        expect(status.sync).not.toHaveProperty(key)
+      }
+      expect(fetchMail).toHaveBeenCalledTimes(1)
+      expect(await AccountEvidence.countDocuments({ userId })).toBe(1)
+    } finally {
+      await stop()
+    }
   })
 })

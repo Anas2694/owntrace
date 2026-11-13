@@ -9,6 +9,8 @@ import GmailSignal from '../src/models/gmail-signal.model.js'
 import GmailSyncJob from '../src/models/gmail-sync-job.model.js'
 import GoogleConnection from '../src/models/google-connection.model.js'
 import User from '../src/models/user.model.js'
+import { startBackgroundMailSync } from '../src/services/background-mail-sync.service.js'
+import { BATCH_LOCK_TIMEOUT_MS } from '../src/services/mail-sync-policy.js'
 import { decryptSecret, encryptSecret } from '../src/utils/encryption.js'
 
 beforeAll(async () => { await Promise.all([GoogleConnection.init(), GmailSyncJob.init(), GmailSignal.init()]) })
@@ -49,7 +51,71 @@ describe('Google connection resilience', () => {
     expect(get).toHaveBeenCalledTimes(37)
   })
 
-  it('waits for an outstanding batch before disconnect cleanup and does not recreate discoveries', async () => {
+  it('recovers a stale background claim and publishes results without browser batch requests', async () => {
+    vi.stubEnv('MAIL_BACKGROUND_SYNC', 'true')
+    const { agent, userId } = await fixture()
+    const list = vi.fn().mockResolvedValue({ data: { messages: [{ id: 'resumed-message' }] } })
+    const get = vi.fn().mockResolvedValue({ data: metadata('resumed-message') })
+    vi.spyOn(google, 'gmail').mockReturnValue({ users: { messages: { list, get } } })
+    const { body } = await agent.post('/api/google/sync').expect(202)
+    expect(body.sync.background).toBe(true)
+    await GmailSyncJob.updateOne(
+      { userId },
+      { $set: { status: 'PROCESSING', leaseId: 'previous-worker', updatedAt: new Date(Date.now() - BATCH_LOCK_TIMEOUT_MS - 1000) } },
+      { timestamps: false },
+    )
+    const stop = startBackgroundMailSync({ intervalMs: 25 })
+    try {
+      await agent.post('/api/google/sync/next').expect(200)
+      await vi.waitFor(async () => {
+        expect((await GmailSyncJob.findOne({ userId })).status).toBe('COMPLETED')
+      })
+      expect(list).toHaveBeenCalledTimes(1)
+      expect(await GmailSignal.countDocuments({ userId })).toBe(1)
+      expect(await Account.countDocuments({ userId })).toBe(1)
+    } finally {
+      await stop()
+    }
+  })
+
+  it('persists backoff after a provider rate limit and resumes after the worker stops', async () => {
+    vi.stubEnv('MAIL_BACKGROUND_SYNC', 'true')
+    const { agent, userId } = await fixture()
+    const list = vi.fn()
+      .mockRejectedValueOnce({ response: { status: 429 } })
+      .mockResolvedValue({ data: { messages: [] } })
+    vi.spyOn(google, 'gmail').mockReturnValue({ users: { messages: { list } } })
+    await agent.post('/api/google/sync').expect(202)
+    const stop = startBackgroundMailSync({ intervalMs: 25 })
+    try {
+      await vi.waitFor(async () => {
+        const job = await GmailSyncJob.findOne({ userId }).select('+nextAttemptAt +retryCount')
+        expect(job).toMatchObject({ status: 'QUEUED', retryCount: 1, lastErrorCode: 'GOOGLE_RATE_LIMITED' })
+        expect(job.nextAttemptAt.getTime()).toBeGreaterThan(Date.now())
+      })
+      await agent.post('/api/google/sync/next').expect(200)
+      expect(list).toHaveBeenCalledTimes(1)
+    } finally {
+      await stop()
+    }
+    await GmailSyncJob.updateOne({ userId }, { $set: { nextAttemptAt: new Date(0) } })
+    const stopRestarted = startBackgroundMailSync({ intervalMs: 25 })
+    try {
+      await vi.waitFor(async () => {
+        expect((await GmailSyncJob.findOne({ userId })).status).toBe('COMPLETED')
+      })
+      expect(list).toHaveBeenCalledTimes(2)
+    } finally {
+      await stopRestarted()
+    }
+  })
+
+  it.each([
+    { background: false, deleting: false },
+    { background: true, deleting: false },
+    { background: true, deleting: true },
+  ])('drains an outstanding batch before cleanup ($background, $deleting)', async ({ background, deleting }) => {
+    vi.stubEnv('MAIL_BACKGROUND_SYNC', String(background))
     const { agent, userId } = await fixture()
     let release, started
     const held = new Promise((resolve) => { release = resolve })
@@ -60,16 +126,27 @@ describe('Google connection resilience', () => {
     } } })
     vi.spyOn(google.auth.OAuth2.prototype, 'revokeToken').mockResolvedValue({ data: {} })
     await agent.post('/api/google/sync').expect(202)
-    const batch = agent.post('/api/google/sync/next').then((response) => response)
-    await entered
-    const disconnect = agent.delete('/api/google/connection').then((response) => response)
+    const stop = background ? startBackgroundMailSync({ intervalMs: 25 }) : null
+    const batch = background ? null : agent.post('/api/google/sync/next').then((response) => response)
     try {
-      await vi.waitFor(async () => { expect((await GoogleConnection.findOne({ userId }))?.status).toBe('DISCONNECTING') })
-    } finally { release() }
-    expect((await batch).status).toBe(200)
-    expect((await disconnect).status).toBe(200)
+      await entered
+      const cleanup = deleting
+        ? agent.delete('/api/auth/account').send({ confirmation: 'DELETE', password: 'synthetic scan test password' })
+        : agent.delete('/api/google/connection')
+      const disconnected = cleanup.then((response) => response)
+      try {
+        await vi.waitFor(async () => { expect((await GoogleConnection.findOne({ userId }))?.status).toBe('DISCONNECTING') })
+      } finally { release() }
+      if (batch) expect((await batch).status).toBe(200)
+      expect((await disconnected).status).toBe(200)
+    } finally {
+      release()
+      await stop?.()
+    }
     for (const model of [GoogleConnection, GmailSignal, GmailSyncJob, Account, AccountEvidence]) expect(await model.countDocuments({ userId })).toBe(0)
-    expect((await User.findById(userId)).onboardingStatus).toBe('COMPLETED')
+    const user = await User.findById(userId)
+    if (deleting) expect(user).toBeNull()
+    else expect(user.onboardingStatus).toBe('COMPLETED')
   })
 
   it.each(['original-account', 'different-account'])('handles reconnect identity %s without mixing refresh tokens or resetting onboarding', async (identity) => {

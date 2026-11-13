@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../services/api.js'
 import useAuth from '../auth/useAuth.js'
+import useBackgroundScanStatus from '../mail/useBackgroundScanStatus.js'
 import PrivacyWorkspace from '../privacy/PrivacyWorkspace.jsx'
 import './google-connection.css'
 
@@ -32,6 +33,7 @@ function getSyncTitle(sync, isSyncing) {
   if (sync.status === 'COMPLETED') return 'Scan complete'
   if (sync.status === 'CANCELLED') return 'Scan cancelled'
   if (sync.status === 'FAILED') return 'Scan needs attention'
+  if (sync.background) return 'Scanning in the background'
   if (sync.status === 'QUEUED') return 'Ready to resume'
   return 'Finishing the current batch'
 }
@@ -84,6 +86,7 @@ function GmailConnectionPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -94,8 +97,8 @@ function GmailConnectionPage() {
     setSearchParams(nextSearchParams, { replace: true })
   }, [searchParams, setSearchParams])
 
-  const loadConnection = useCallback(async ({ clearError = true } = {}) => {
-    setIsLoading(true)
+  const loadConnection = useCallback(async ({ clearError = true, quiet = false, isCurrent = () => true } = {}) => {
+    if (!quiet) setIsLoading(true)
     if (clearError) setError('')
 
     try {
@@ -103,18 +106,23 @@ function GmailConnectionPage() {
         api.get('/google/connection'),
         api.get('/google/sync'),
       ])
+      if (!isCurrent()) return
+      if (quiet) setError('')
       setGoogleState(connectionResponse.data.google)
       setSync(syncResponse.data.sync)
       if (syncResponse.data.sync?.status === 'COMPLETED') await restoreSession({ showLoading: false })
     } catch (requestError) {
+      if (!isCurrent()) return
       setError(
         requestError.response?.data?.message ||
           'OwnTrace could not load the Google connection. Try again.',
       )
     } finally {
-      setIsLoading(false)
+      if (!quiet) setIsLoading(false)
     }
   }, [restoreSession])
+
+  useBackgroundScanStatus(sync, isDisconnecting || isSyncing || isCancelling, loadConnection)
 
   useEffect(() => {
     stopSyncRef.current = false
@@ -177,7 +185,8 @@ function GmailConnectionPage() {
       const response = await api.post('/google/sync')
       if (stopSyncRef.current) return
       setSync(response.data.sync)
-      await runSyncBatches(response.data.sync)
+      if (response.data.sync?.background) setIsSyncing(false)
+      else await runSyncBatches(response.data.sync)
     } catch (requestError) {
       setError(
         requestError.response?.data?.message ||
@@ -189,6 +198,7 @@ function GmailConnectionPage() {
 
   async function handleCancelSync() {
     stopSyncRef.current = true
+    setIsCancelling(true)
 
     try {
       const response = await api.delete('/google/sync')
@@ -198,6 +208,8 @@ function GmailConnectionPage() {
       setError(
         requestError.response?.data?.message || 'OwnTrace could not cancel the scan. Try again.',
       )
+    } finally {
+      setIsCancelling(false)
     }
   }
 
@@ -287,6 +299,7 @@ function GmailConnectionPage() {
                 {' '}email metadata records per scan, {googleState.syncPolicy.batchSize} at a time, and can
                 finish sooner when no more results remain. It safely deduplicates messages already seen.
                 A saved clue represents one message, not one discovered account. The scan stops when it reaches this limit or runs out of results.
+                {sync?.background && ['QUEUED', 'SCANNING', 'PROCESSING'].includes(sync.status) ? ' You can leave this page while OwnTrace scans.' : ''}
               </p>
             </div>
             <dl>
@@ -302,7 +315,7 @@ function GmailConnectionPage() {
               {sync?.status === 'COMPLETED' ? (
                 <Link className="google-primary-action" to="/accounts">Review discovered accounts</Link>
               ) : null}
-              {sync?.status === 'QUEUED' && !isSyncing ? (
+              {sync?.background && ['QUEUED', 'SCANNING', 'PROCESSING'].includes(sync.status) ? null : sync?.status === 'QUEUED' && !isSyncing ? (
                 <button className="google-primary-action" type="button" disabled={isDisconnecting || connection.status === 'NEEDS_RECONNECT'} onClick={() => runSyncBatches(sync)}>
                   Resume scan
                 </button>
@@ -311,8 +324,8 @@ function GmailConnectionPage() {
                   {isSyncing ? 'Scanning metadata…' : sync?.status === 'COMPLETED' ? 'Check for newer messages' : 'Start metadata scan'}
                 </button>
               )}
-              {['QUEUED', 'SCANNING', 'PROCESSING'].includes(sync?.status) ? <button type="button" disabled={isDisconnecting} onClick={handleCancelSync}>Cancel scan</button> : null}
-              {!isSyncing ? <button type="button" onClick={() => loadConnection()}>Refresh status</button> : null}
+              {['QUEUED', 'SCANNING', 'PROCESSING'].includes(sync?.status) ? <button type="button" disabled={isDisconnecting || isCancelling} onClick={handleCancelSync}>Cancel scan</button> : null}
+              {!isSyncing && !isCancelling && !sync?.background ? <button type="button" onClick={() => loadConnection()}>Refresh status</button> : null}
             </div>
           </section>
         ) : null}
